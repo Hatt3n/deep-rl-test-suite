@@ -12,6 +12,10 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 import gym
 
+# CPU-Only <- Actually results in better performance
+#import os
+#os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
 
 def make_env():
     return custom_envs.furuta_swing_up.FurutaPendulumEnv()
