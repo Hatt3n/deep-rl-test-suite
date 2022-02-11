@@ -1,18 +1,21 @@
 """
 File based on code from 
 https://github.com/openai/gym/blob/58aeddb62fb9d46d2d2481d1f7b0a380d8c454b1/gym/core.py 
+and
+https://github.com/openai/gym/blob/58aeddb62fb9d46d2d2481d1f7b0a380d8c454b1/gym/envs/classic_control/pendulum.py
 and (loosely)
 https://github.com/openai/gym/blob/58aeddb62fb9d46d2d2481d1f7b0a380d8c454b1/gym/envs/classic_control/acrobot.py
-The former has no explicit license notice, but is a part of OpenAI Gym which uses the MIT License:
+The former two have no explicit license notice, but are a part of OpenAI Gym which uses the MIT License:
 https://mit-license.org/
 The latter was published under the 3-Clause BSD License:
 https://opensource.org/licenses/BSD-3-Clause
 
-Last edit: 2022-02-02
+Last edit: 2022-02-11
 By: dansah
 """
 
 from typing import Optional
+from os import path
 
 import deps.ipm_python.furuta
 import math
@@ -39,9 +42,10 @@ class FurutaPendulumEnv(gym.core.Env):
 
         self.internal_state = None
         self.START_THETA = math.pi # Radians
-        self.TIME_LIMIt = 10.0 # Seconds
+        self.TIME_LIMIT = 10.0 # Seconds
         self.DT = 0.02 # Time step size in seconds
 
+        self.viewer = None
         self.np_random = None # Not needed in modern versions of OpenAI Gym
     
     def seed(self, seed=None): # Not needed in modern versions of OpenAI Gym
@@ -92,7 +96,7 @@ class FurutaPendulumEnv(gym.core.Env):
 
         return self._get_observed_state()
 
-    def render(self, mode="ansi"):
+    def render(self, mode="human"):
         """Renders the environment.
         - human: render to the current display or terminal and
           return nothing. Usually for human consumption. <- Not implemented
@@ -100,18 +104,42 @@ class FurutaPendulumEnv(gym.core.Env):
           terminal-style text representation. The text can include newlines
           and ANSI escape sequences (e.g. for colors).
         """
-        # TODO: Improve
-        observed_state = self._get_observed_state()
-        theta = observed_state[0]
-        angle_diff = np.min([theta, 2*np.pi - theta])
-        return "Current angle diff: %s" % (angle_diff)
+        if mode == "ansi":
+            # TODO: Improve
+            observed_state = self._get_observed_state()
+            theta = observed_state[0]
+            angle_diff = np.min([theta, 2*np.pi - theta])
+            return "Current angle diff: %s" % (angle_diff)
+        elif mode == "human":
+            if self.viewer is None:
+                from gym.envs.classic_control import rendering
 
-    #def close(self):
-    #    """Override close in your subclass to perform any necessary cleanup.
-    #    Environments will automatically close() themselves when
-    #    garbage collected or when the program exits.
-    #    """
-    #    pass
+                self.viewer = rendering.Viewer(500, 500)
+                self.viewer.set_bounds(-2.2, 2.2, -2.2, 2.2)
+                rod = rendering.make_capsule(1, 0.2)
+                rod.set_color(0.8, 0.3, 0.3)
+                self.pole_transform = rendering.Transform()
+                rod.add_attr(self.pole_transform)
+                self.viewer.add_geom(rod)
+                axle = rendering.make_circle(0.05)
+                axle.set_color(0, 0, 0)
+                self.viewer.add_geom(axle)
+            
+            state = self._get_observed_state()
+            self.pole_transform.set_rotation(state[0] + np.pi / 2) # An angle of 0 means that it points downwards.
+
+            return self.viewer.render(return_rgb_array=mode == "rgb_array")
+        else:
+            raise NotImplementedError
+
+    def close(self):
+        """Override close in your subclass to perform any necessary cleanup.
+        Environments will automatically close() themselves when
+        garbage collected or when the program exits.
+        """
+        if self.viewer:
+            self.viewer.close()
+            self.viewer = None
 
 
     def _get_observed_state(self):
@@ -124,4 +152,4 @@ class FurutaPendulumEnv(gym.core.Env):
         """Returns true if a terminal state has been reached.
         """
         time = self.internal_state["furuta_ode"].output(ys=["t"])["t"]
-        return time >= self.TIME_LIMIt
+        return time >= self.TIME_LIMIT
