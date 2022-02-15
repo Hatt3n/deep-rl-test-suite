@@ -37,7 +37,8 @@ class FurutaPendulumEnv(gym.core.Env):
 
     def __init__(self):
         # Required
-        self.action_space = spaces.Box(low=np.array([-float("inf")]), high=np.array([float("inf")]), dtype=np.float16) # Experiment with np.float32 vs 16.
+        self.MAX_TORQUE = 100 # TODO: Adjust
+        self.action_space = spaces.Box(low=np.array([-float(self.MAX_TORQUE)]), high=np.array([float(self.MAX_TORQUE)]), dtype=np.float16) # Experiment with np.float32 vs 16.
         self.observation_space = spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float16)
 
         self.internal_state = None
