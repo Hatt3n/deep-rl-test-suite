@@ -17,6 +17,11 @@ import torch.nn as nn
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 import gym
+import numpy as np
+
+# Eager execution is required for deep copy. However, tf.placeholder() won't work with eager execution...
+#tf.enable_eager_execution()
+#import copy
 
 # CPU-Only <- Actually results in better performance
 import os
@@ -31,11 +36,11 @@ do_policy_test = False
 do_plots = True
 
 # Training parameters
-EPOCHS=3
+EPOCHS=20
 use_tensorflow = True
 base_dir = '.\out\\'
 
-from collections import OrderedDict
+#from collections import OrderedDict
 
 def make_env():
     """Creates a new Furuta Pendulum environment (swing-up)
@@ -61,10 +66,10 @@ def main():
     else:
         from spinup import ddpg_pytorch as ddpg
         from spinup import ppo_pytorch as ppo
-    algorithms = OrderedDict({
-        "ppo": ppo,
+    algorithms = {
         "ddpg": ddpg,
-    })
+        "ppo": ppo,
+    }
 
     if do_training:
         for name, alg_fn in algorithms.items():
