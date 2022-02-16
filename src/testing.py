@@ -31,9 +31,11 @@ do_policy_test = False
 do_plots = True
 
 # Training parameters
-EPOCHS=30
+EPOCHS=3
 use_tensorflow = True
 base_dir = '.\out\\'
+
+from collections import OrderedDict
 
 def make_env():
     """Creates a new Furuta Pendulum environment (swing-up)
@@ -41,7 +43,7 @@ def make_env():
     return custom_envs.furuta_swing_up.FurutaPendulumEnv()
 
 def train_algorithm(algorithm_fn, name, mlp_architecture=[64,64], activation_func=tf.nn.relu, 
-                    max_ep_len=500, steps_per_epoch=4000, epochs=EPOCHS, seed=1337):
+                    max_ep_len=500, steps_per_epoch=4000, epochs=EPOCHS, seed=0):
     # Based on example from https://spinningup.openai.com/en/latest/user/running.html
     if not use_tensorflow and activation_func == tf.nn.relu:
         activation_func = nn.ReLU
@@ -59,14 +61,16 @@ def main():
     else:
         from spinup import ddpg_pytorch as ddpg
         from spinup import ppo_pytorch as ppo
-    algorithms = {
-        "ddpg": ddpg,
+    algorithms = OrderedDict({
         "ppo": ppo,
-    }
+        "ddpg": ddpg,
+    })
 
     if do_training:
         for name, alg_fn in algorithms.items():
-            print("Now training with %s" % (name))
+            print("------------------------------------")
+            print("----> Now training with %s <----" % (name))
+            print("------------------------------------")
             train_algorithm(alg_fn, name)
 
     if do_policy_test:
