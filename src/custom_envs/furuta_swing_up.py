@@ -68,6 +68,8 @@ class FurutaPendulumEnv(gym.core.Env):
             info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)
         """
         torque = action[0]
+        if abs(torque) > self.MAX_TORQUE:
+            print("Warning: Maximum Torque exceeded, received value of %d" % torque)
         self.internal_state["furuta_ode"].trans(torque, self.DT)
         observed_state = self._get_observed_state()
         theta = observed_state[0]
