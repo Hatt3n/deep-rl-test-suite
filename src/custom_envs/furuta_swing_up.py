@@ -10,7 +10,7 @@ https://mit-license.org/
 The latter was published under the 3-Clause BSD License:
 https://opensource.org/licenses/BSD-3-Clause
 
-Last edit: 2022-02-11
+Last edit: 2022-02-21
 By: dansah
 """
 
@@ -27,7 +27,8 @@ from gym import spaces
 from gym.utils import seeding
 
 class FurutaPendulumEnv(gym.core.Env):
-    """OpenAI Gym wrapper for the Furuta pendulum environment.
+    """
+    OpenAI Gym wrapper for the Furuta pendulum environment.
     """
     
     # Optional
@@ -55,7 +56,8 @@ class FurutaPendulumEnv(gym.core.Env):
         return np.array([seed])
 
     def step(self, action):
-        """Run one timestep of the environment's dynamics. When end of
+        """
+        Run one timestep of the environment's dynamics. When end of
         episode is reached, you are responsible for calling `reset()`
         to reset this environment's state.
         Accepts an action and returns a tuple (observation, reward, done, info).
@@ -83,7 +85,8 @@ class FurutaPendulumEnv(gym.core.Env):
         return (observed_state, reward, terminal, {})
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
-        """Resets the environment to an initial state and returns an initial
+        """
+        Resets the environment to an initial state and returns an initial
         observation.
         Returns:
             observation (object): the initial observation.
@@ -100,7 +103,8 @@ class FurutaPendulumEnv(gym.core.Env):
         return self._get_observed_state()
 
     def render(self, mode="human"):
-        """Renders the environment.
+        """
+        Renders the environment.
         - human: render to the current display or terminal and
           return nothing. Usually for human consumption. <- Not implemented
         - ansi: Return a string (str) or StringIO.StringIO containing a
@@ -109,34 +113,53 @@ class FurutaPendulumEnv(gym.core.Env):
         """
         if mode == "ansi":
             # TODO: Improve
-            observed_state = self._get_observed_state()
-            theta = observed_state[0]
+            internal_state = self._get_internal_state()
+            theta = internal_state[0]
             angle_diff = np.min([theta, 2*np.pi - theta])
             return "Current angle diff: %s" % (angle_diff)
         elif mode == "human":
             if self.viewer is None:
                 from gym.envs.classic_control import rendering
 
-                self.viewer = rendering.Viewer(500, 500)
-                self.viewer.set_bounds(-2.2, 2.2, -2.2, 2.2)
-                rod = rendering.make_capsule(1, 0.2)
-                rod.set_color(0.8, 0.3, 0.3)
-                self.pole_transform = rendering.Transform()
-                rod.add_attr(self.pole_transform)
-                self.viewer.add_geom(rod)
-                axle = rendering.make_circle(0.05)
-                axle.set_color(0, 0, 0)
-                self.viewer.add_geom(axle)
+                offset = 1.2
+
+                self.viewer = rendering.Viewer(600, 500)
+                self.viewer.set_bounds(-2.64, 2.64, -2.2, 2.2)
+                
+                # Vertical arm
+                vertical_arm = rendering.make_capsule(1, 0.2)
+                vertical_arm.set_color(0.8, 0.3, 0.3)
+                self.vertical_arm_transform = rendering.Transform(translation=(-offset,0))
+                vertical_arm.add_attr(self.vertical_arm_transform)
+                self.viewer.add_geom(vertical_arm)
+                vertical_axle = rendering.make_circle(0.05)
+                vertical_axle.set_color(0, 0, 0)
+                vertical_axle.add_attr(rendering.Transform(translation=(-offset,0)))
+                self.viewer.add_geom(vertical_axle)
+
+                # Horizontal arm
+                horizontal_arm = rendering.make_capsule(1, 0.2)
+                horizontal_arm.set_color(0.3, 0.3, 0.8)
+                self.horizontal_arm_transform = rendering.Transform(translation=(offset,0))
+                horizontal_arm.add_attr(self.horizontal_arm_transform)
+                self.viewer.add_geom(horizontal_arm)
+                horizontal_axle = rendering.make_circle(0.05)
+                horizontal_axle.set_color(0, 0, 0)
+                horizontal_axle.add_attr(rendering.Transform(translation=(offset,0)))
+                self.viewer.add_geom(horizontal_axle)
+
             
-            state = self._get_observed_state()
-            self.pole_transform.set_rotation(state[0] + np.pi / 2) # An angle of 0 means that it points downwards.
+            state = self._get_internal_state()
+            self.vertical_arm_transform.set_rotation(state[0] + np.pi / 2) # An angle of 0 means that it points downwards.
+            self.horizontal_arm_transform.set_rotation(state[3] + np.pi / 2)
 
             return self.viewer.render(return_rgb_array=mode == "rgb_array")
         else:
             raise NotImplementedError
 
     def close(self):
-        """Override close in your subclass to perform any necessary cleanup.
+        """
+        Override close in your subclass to perform any necessary cleanup.
         Environments will automatically close() themselves when
         garbage collected or when the program exits.
         """
@@ -145,14 +168,24 @@ class FurutaPendulumEnv(gym.core.Env):
             self.viewer = None
 
 
+    def _get_internal_state(self):
+        """
+        Return the current internal state. The difference against the observed,
+        is that Phi is included.
+        """
+        internal_state = self.internal_state["furuta_ode"].output(ys=["theta", "dthetadt", "dphidt", "phi"])
+        return np.array([internal_state["theta"], internal_state["dthetadt"], internal_state["dphidt"], internal_state["phi"]])
+
     def _get_observed_state(self):
-        """Return the current observed state.
+        """
+        Return the current observed state.
         """
         observed_state = self.internal_state["furuta_ode"].output(ys=["theta", "dthetadt", "dphidt"])
         return np.array([observed_state["theta"], observed_state["dthetadt"], observed_state["dphidt"]])
 
     def _terminal_reached(self):
-        """Returns true if a terminal state has been reached.
+        """
+        Returns true if a terminal state has been reached.
         """
         time = self.internal_state["furuta_ode"].output(ys=["t"])["t"]
         return time >= self.TIME_LIMIT
