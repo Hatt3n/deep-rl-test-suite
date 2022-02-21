@@ -1,7 +1,7 @@
 """
 File for testing the Furuta pendulum swing-up task.
 
-Last edit: 2022-02-17
+Last edit: 2022-02-21
 By: dansah
 """
 
@@ -28,12 +28,9 @@ import numpy as np
 #import os
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-# Known issues:
-# 1. Crashes on exit of visualization.
-
 # High-level Parameters
-do_training = True
-do_policy_test = False
+do_training = False
+do_policy_test = True
 do_plots = True
 
 # Training parameters
@@ -71,6 +68,31 @@ def train_algorithm(algorithm_fn, output_dir, mlp_architecture=[64,64], activati
     else:
         algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=steps_per_epoch, 
                      epochs=epochs, logger_kwargs=logger_kwargs, seed=seed)
+
+def evaluate_algorithm(output_dir):
+    """
+    Evaluate a trained algorithm by applying it and rendering the result.
+    """
+    itr = -1
+    env, get_action = spinup.utils.test_policy.load_policy_and_env(output_dir,
+                                                                   itr if itr >=0 else 'last',
+                                                                   False) # Deterministic true/false. Only used by the SAC algorithm.
+    spinup.utils.test_policy.run_policy(env, get_action, max_ep_len=500, num_episodes=2, render=True)
+    env.close()
+
+def annonuce_message(message):
+    """
+    Prints a message in a fancy way.
+    """
+    print("------------------------------------")
+    print("----> %s <----" % (message))
+    print("------------------------------------")
+
+def heads_up_message(message):
+    """
+    Prints a message in a fancy way.
+    """
+    print("----> %s <----" % (message))
 
 def get_output_dir(alg_name, arch_name):
     """
@@ -141,20 +163,23 @@ def main():
 
     if do_training:
         for name, alg_fn in algorithms.items():
-            print("------------------------------------")
-            print("----> Now training with %s <----" % (name))
-            print("------------------------------------")
+            annonuce_message("Now training with %s" % (name))
             for arch_dict in architectures:
-                print("----> Using arch %s <----" % (arch_dict['name']))
+                heads_up_message("Using arch %s" % (arch_dict['name']))
                 train_algorithm(alg_fn, get_output_dir(name, arch_dict['name']), mlp_architecture=arch_dict['layers'], 
                                 activation_func=get_activation_by_name(arch_dict['activation']))
 
     if do_policy_test:
-        itr = -1
-        env, get_action = spinup.utils.test_policy.load_policy_and_env('.\out',
-                                            itr if itr >=0 else 'last',
-                                            False) # Deterministic true/false. Only used by the SAC algorithm.
-        spinup.utils.test_policy.run_policy(env, get_action, max_ep_len=500, num_episodes=5, render=True)
+        for name, alg_fn in algorithms.items():
+            annonuce_message("Now testing %s" % (name))
+            for arch_dict in architectures:
+                heads_up_message("Using arch %s" % (arch_dict['name']))
+                output_dir = get_output_dir(name, arch_dict['name'])
+                if use_tensorflow:
+                    with tf.Graph().as_default():
+                        evaluate_algorithm(output_dir)
+                else:
+                    evaluate_algorithm(output_dir)
 
     if do_plots:
         dirs = []
