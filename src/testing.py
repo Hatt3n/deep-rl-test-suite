@@ -1,7 +1,7 @@
 """
 File for testing the Furuta pendulum swing-up task.
 
-Last edit: 2022-02-21
+Last edit: 2022-02-22
 By: dansah
 """
 
@@ -34,7 +34,7 @@ do_policy_test = True
 do_plots = True
 
 # Training parameters
-EPOCHS=2
+EPOCHS=20
 use_tensorflow = True
 base_dir = '.\out\\'
 
@@ -53,8 +53,6 @@ def train_algorithm(algorithm_fn, output_dir, mlp_architecture=[64,64], activati
     Nothing is returned.
     """
     # Based on example from https://spinningup.openai.com/en/latest/user/running.html
-    if not use_tensorflow and activation_func == tf.nn.relu:
-        activation_func = nn.ReLU
     env_fn = make_env
     ac_kwargs = dict(hidden_sizes=mlp_architecture, activation=activation_func) # TODO: Configure initializer independently for algorithms. TODO: Investigae why activation is null.
     logger_kwargs = dict(output_dir=output_dir, exp_name='experiment_test0_' + output_dir)
@@ -108,14 +106,14 @@ def get_activation_by_name(activation_name):
     """
     if activation_name == "relu":
         if use_tensorflow:
-            tf.nn.relu
+            return tf.nn.relu
         else:
-            nn.ReLU
+            return nn.ReLU
     elif activation_name == "tanh":
         if use_tensorflow:
-            tf.nn.tanh
+            return tf.nn.tanh
         else:
-            nn.Tanh
+            return nn.Tanh
     else:
         raise Exception("Invalid activation function name %s" % (activation_name))
 
@@ -133,7 +131,7 @@ def main():
         "ddpg": ddpg,
         "ppo": ppo,
     }
-    architectures = [
+    all_architectures = [
         {
             "name": "64_relu",
             "layers": [64],
@@ -160,6 +158,12 @@ def main():
             "activation": "relu"
         },
     ]
+
+    architecture_to_use = ["64_64_relu", "64_64_tanh"] # 256_128_relu
+    architectures = []
+    for arch_dict in all_architectures:
+        if arch_dict['name'] in architecture_to_use:
+            architectures.append(arch_dict)
 
     if do_training:
         for name, alg_fn in algorithms.items():
