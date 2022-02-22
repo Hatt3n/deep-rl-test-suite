@@ -10,12 +10,14 @@ https://mit-license.org/
 The latter was published under the 3-Clause BSD License:
 https://opensource.org/licenses/BSD-3-Clause
 
-Last edit: 2022-02-21
+Last edit: 2022-02-22
 By: dansah
 """
 
 from typing import Optional
 from os import path
+
+from black import dump_to_file
 
 import deps.ipm_python.furuta
 import math
@@ -38,9 +40,9 @@ class FurutaPendulumEnv(gym.core.Env):
 
     def __init__(self):
         # Required
-        self.MAX_TORQUE = 100 # TODO: Adjust
+        self.MAX_TORQUE = 250 # TODO: Adjust
         self.action_space = spaces.Box(low=np.array([-float(self.MAX_TORQUE)]), high=np.array([float(self.MAX_TORQUE)]), dtype=np.float16) # Experiment with np.float32 vs 16.
-        self.observation_space = spaces.Box(low=-float("inf"), high=float("inf"), shape=(3,), dtype=np.float16)
+        self.observation_space = spaces.Box(low=-float("inf"), high=float("inf"), shape=(5,), dtype=np.float16) # Old shape was (3,) new is (5,)
 
         self.internal_state = None
         self.START_THETA = math.pi # Radians
@@ -73,13 +75,45 @@ class FurutaPendulumEnv(gym.core.Env):
         if abs(torque) > self.MAX_TORQUE:
             print("Warning: Maximum Torque exceeded, received value of %d" % torque)
         self.internal_state["furuta_ode"].trans(torque, self.DT)
-        observed_state = self._get_observed_state()
-        theta = observed_state[0]
+        internal_state = self._get_internal_state()
+        theta = internal_state[0]
+        dthetadt = internal_state[1]
+        dphidt = internal_state[2]
+        phi = internal_state[3]
         angle_diff = np.min([theta, 2*np.pi - theta]) # Angle diff between top position and current position
-        if (angle_diff < np.pi / 2):
-            reward = (np.pi - angle_diff)*10.0 / np.max([0.5, torque]) # TODO: Tweak, and compare to other approaches
-        else:
-            reward = 0
+        #if (angle_diff < np.pi / 4):
+            #reward = (np.pi - angle_diff)*10.0 / np.max([0.5, torque]) # This does not work well. The agent will spin the horizontal arm fast.
+            # It can do this and still get a high reward by appling a really high torque for a short time. The penalty must therefore incorporate
+            # the angular velocity of the arm. Also, it should have been abs(torque)...
+            #reward = 2*((np.pi - angle_diff)**2) / (np.max([0.5, abs(torque)]) + np.max([0.5,abs(dphidt)]))
+
+        # From the paper "A Reinforcement Learning Controller for the Swing-Up of the Furuta Pendulum" by D. Guida et al.
+        # Constants
+        c1 = -1
+        c_lim = -10000
+        c2 = -5
+        c_tau = -0.05
+        c_dot_theta_2 = -0.5
+        theta_2_min = np.pi/2
+        dot_theta_2_min = 5
+        c_balance = 5
+        # In the paper, theta_2 (here: theta) is 0 when the arm is hanging down vertically, and positive when rotating counter-clockwise.
+        # Similarily, theta_1 (here: phi) is positive when rotating counter-clockwise.
+        theta_1 = phi # Starts at 0.
+        theta_1 = theta_1 if abs(theta_1) < 2*np.pi else theta_1 - np.sign(theta_1) * 2 * np.pi
+        theta_2 = theta + np.pi
+        theta_2 = theta_2 if abs(theta_2) < 2*np.pi else theta_2 - np.sign(theta_2) * 2 * np.pi
+        dot_theta_2 = dthetadt
+        tau_c = torque # Is this correct? They refer to tau_c as the mechanical moment.
+
+        #print("Theta 1 is %d, Theta 2 is %s" % (theta_1, theta_2))
+
+        reward = c1*((theta_1)**2) + c_lim*(abs(theta_1) > 2*np.pi) + c2*((np.pi - abs(theta_2))**2) + c_tau*(tau_c**2) + c_dot_theta_2*(dot_theta_2**2) 
+        reward = reward + ((np.pi - abs(theta_2)) < theta_2_min) * (abs(dot_theta_2) < dot_theta_2_min) * ((dot_theta_2_min - abs(dot_theta_2)) / dot_theta_2_min) * c_balance
+        #print("Reward is %s" % reward)
+        #else:
+        #    reward = 0
+        observed_state = self._get_observed_state_from_internal(internal_state)
         terminal = self._terminal_reached()
 
         return (observed_state, reward, terminal, {})
@@ -100,7 +134,7 @@ class FurutaPendulumEnv(gym.core.Env):
         }
         self.internal_state["furuta_ode"].init(theta0=self.START_THETA)
 
-        return self._get_observed_state()
+        return self._get_observed_state_from_internal(self._get_internal_state())
 
     def render(self, mode="human"):
         """
@@ -179,9 +213,21 @@ class FurutaPendulumEnv(gym.core.Env):
     def _get_observed_state(self):
         """
         Return the current observed state.
+        NOTE: The returned format is the old one, i.e.:
+        [theta, dthetadt, dphidt].
         """
         observed_state = self.internal_state["furuta_ode"].output(ys=["theta", "dthetadt", "dphidt"])
         return np.array([observed_state["theta"], observed_state["dthetadt"], observed_state["dphidt"]])
+
+    def _get_observed_state_from_internal(self, internal_state):
+        """
+        Return the current observed state based on the provided internal.
+        Internal state should be of the form [theta, dthetadt, dphidt, phi].
+        The oberseved state has the form [phi, dphidt, sin(theta), cos(theta), dthetadt],
+        from the paper "A Reinforcement Learning Controller for the Swing-Up of the Furuta Pendulum" 
+        by D. Guida et al.
+        """
+        return np.array([internal_state[3], internal_state[2], np.sin(internal_state[0]), np.cos(internal_state[0]), internal_state[1]])
 
     def _terminal_reached(self):
         """
