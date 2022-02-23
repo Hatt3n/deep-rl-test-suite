@@ -6,6 +6,7 @@ By: dansah
 """
 
 import custom_envs.furuta_swing_up_paper
+import custom_envs.furuta_swing_up_paper_r
 
 import spinup.utils.test_policy
 import spinup.utils.plot
@@ -29,10 +30,10 @@ import numpy as np
 # High-level Parameters
 do_training = False
 do_policy_test = True
-do_plots = False
+do_plots = True
 
 # Training parameters
-EPOCHS=5
+EPOCHS=30
 use_tensorflow = True
 base_dir = '.\out\\'
 
@@ -44,14 +45,19 @@ def make_env():
     """
     return custom_envs.furuta_swing_up_paper.FurutaPendulumEnvPaper()
 
-def train_algorithm(algorithm_fn, output_dir, mlp_architecture=[64,64], activation_func=tf.nn.relu, 
+def make_env_r():
+    """
+    Creates a new Furuta Pendulum environment (swing-up)
+    """
+    return custom_envs.furuta_swing_up_paper_r.FurutaPendulumEnvPaperRecurrent()
+
+def train_algorithm(algorithm_fn, env_fn, output_dir, mlp_architecture=[64,64], activation_func=tf.nn.relu, 
                     max_ep_len=500, steps_per_epoch=4000, epochs=EPOCHS, seed=0):
     """
     Trains the given algorithm. The output is saved in the provided output directory.
     Nothing is returned.
     """
     # Based on example from https://spinningup.openai.com/en/latest/user/running.html
-    env_fn = make_env
     ac_kwargs = dict(hidden_sizes=mlp_architecture, activation=activation_func) # TODO: Configure initializer independently for algorithms. TODO: Investigae why activation is null.
     logger_kwargs = dict(output_dir=output_dir, exp_name='experiment_test0_' + output_dir)
     
@@ -125,10 +131,23 @@ def main():
     else:
         from spinup import ddpg_pytorch as ddpg
         from spinup import ppo_pytorch as ppo
-    algorithms = {
-        "ddpg": ddpg,
-        "ppo": ppo,
-    }
+    all_algorithms = [
+        {
+            "name": "ddpg",
+            "alg_fn": ddpg,
+            "env": make_env,
+        },
+        {
+            "name": "ppo",
+            "alg_fn": ppo,
+            "env": make_env,
+        },
+        {
+            "name": "ddpg_r",
+            "alg_fn": ddpg,
+            "env": make_env_r,
+        },
+    ]
     all_architectures = [
         {
             "name": "64_relu",
@@ -157,6 +176,12 @@ def main():
         },
     ]
 
+    algorithms_to_use = ["ddpg", "ppo", "ddpg_r"]
+    algorithms = []
+    for alg_dict in all_algorithms:
+        if alg_dict['name'] in algorithms_to_use:
+            algorithms.append(alg_dict)
+
     architecture_to_use = ["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
     architectures = []
     for arch_dict in all_architectures:
@@ -164,15 +189,19 @@ def main():
             architectures.append(arch_dict)
 
     if do_training:
-        for name, alg_fn in algorithms.items():
+        for alg_dict in algorithms:
+            name = alg_dict['name']
+            alg_fn = alg_dict['alg_fn']
             annonuce_message("Now training with %s" % (name))
             for arch_dict in architectures:
                 heads_up_message("Using arch %s" % (arch_dict['name']))
-                train_algorithm(alg_fn, get_output_dir(name, arch_dict['name']), mlp_architecture=arch_dict['layers'], 
+                train_algorithm(alg_fn, alg_dict['env'], get_output_dir(name, arch_dict['name']), mlp_architecture=arch_dict['layers'], 
                                 activation_func=get_activation_by_name(arch_dict['activation']))
 
     if do_policy_test:
-        for name, alg_fn in algorithms.items():
+        for alg_dict in algorithms:
+            name = alg_dict['name']
+            alg_fn = alg_dict['alg_fn']
             annonuce_message("Now testing %s" % (name))
             for arch_dict in architectures:
                 heads_up_message("Using arch %s" % (arch_dict['name']))
@@ -186,7 +215,8 @@ def main():
     if do_plots:
         dirs = []
         alg_names = []
-        for alg_name in algorithms:
+        for alg_dict in algorithms:
+            alg_name = alg_dict['name']
             for arch_dict in architectures:
                 arch_name = arch_dict['name']
                 dirs.append(get_output_dir(alg_name, arch_name))
