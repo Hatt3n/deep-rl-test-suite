@@ -34,7 +34,7 @@ class FurutaPendulumEnv(gym.core.Env):
     #reward_range = (-float("inf"), float("inf"))
     #spec = None
 
-    def __init__(self):
+    def __init__(self, wrap_angles=True):
         # Required
         self.MAX_TORQUE = 250 # TODO: Adjust
         self.action_space = spaces.Box(low=np.array([-float(self.MAX_TORQUE)]), high=np.array([float(self.MAX_TORQUE)]), dtype=np.float16) # Experiment with np.float32 vs 16.
@@ -47,6 +47,8 @@ class FurutaPendulumEnv(gym.core.Env):
 
         self.viewer = None
         self.np_random = None # Not needed in modern versions of OpenAI Gym
+
+        self.wrap_angles = wrap_angles
     
     def seed(self, seed=None): # Not needed in modern versions of OpenAI Gym
         if seed is not None or self.np_random is None:
@@ -94,7 +96,7 @@ class FurutaPendulumEnv(gym.core.Env):
         
         # Reset the internal state.
         self.internal_state = {
-            "furuta_ode": deps.ipm_python.furuta.FurutaODE(),
+            "furuta_ode": deps.ipm_python.furuta.FurutaODE(wrap_angles=self.wrap_angles),
         }
         self.internal_state["furuta_ode"].init(theta0=self.START_THETA)
 

@@ -23,6 +23,9 @@ class FurutaPendulumEnvPaper(custom_envs.furuta_swing_up_base.FurutaPendulumEnv)
     function of the paper "A Reinforcement Learning Controller for the Swing-Up of the Furuta Pendulum" by D. Guida et al. (2020)
     """
 
+    def __init__(self):
+        super().__init__(wrap_angles=False)
+
     def step(self, action):
         """
         Run one timestep of the environment's dynamics. When end of
@@ -65,13 +68,13 @@ class FurutaPendulumEnvPaper(custom_envs.furuta_swing_up_base.FurutaPendulumEnv)
         # In the paper, theta_2 (here: theta) is 0 when the arm is hanging down vertically, and positive when rotating counter-clockwise.
         # Similarily, theta_1 (here: phi) is positive when rotating counter-clockwise.
         theta_1 = phi # Starts at 0.
-        theta_1 = theta_1 if abs(theta_1) < 2*np.pi else theta_1 - np.sign(theta_1) * 2 * np.pi
-        theta_2 = theta + np.pi
-        theta_2 = theta_2 if abs(theta_2) < 2*np.pi else theta_2 - np.sign(theta_2) * 2 * np.pi
+        #theta_1 = theta_1 if abs(theta_1) < 2*np.pi else theta_1 - np.sign(theta_1) * 2 * np.pi # Wrap-around defeats the purpose of the reward-function.
+        theta_2 = theta - np.pi
+        #theta_2 = theta_2 if abs(theta_2) < 2*np.pi else theta_2 - np.sign(theta_2) * 2 * np.pi
         dot_theta_2 = dthetadt
         tau_c = torque # Is this correct? They refer to tau_c as the mechanical moment.
 
-        #print("Theta 1 is %d, Theta 2 is %s" % (theta_1, theta_2))
+        #print("Theta 1 is %s, Theta 2 is %s" % (theta_1, theta_2))
 
         reward = c1*((theta_1)**2) + c_lim*(abs(theta_1) > 2*np.pi) + c2*((np.pi - abs(theta_2))**2) + c_tau*(tau_c**2) + c_dot_theta_2*(dot_theta_2**2) 
         reward = reward + ((np.pi - abs(theta_2)) < theta_2_min) * (abs(dot_theta_2) < dot_theta_2_min) * ((dot_theta_2_min - abs(dot_theta_2)) / dot_theta_2_min) * c_balance
