@@ -1,13 +1,11 @@
 """
 File for testing the Furuta pendulum swing-up task.
 
-Last edit: 2022-02-22
+Last edit: 2022-02-23
 By: dansah
 """
 
-from platform import architecture
-from spinup.utils import test_policy
-import custom_envs.furuta_swing_up
+import custom_envs.furuta_swing_up_paper
 
 import spinup.utils.test_policy
 import spinup.utils.plot
@@ -31,10 +29,10 @@ import numpy as np
 # High-level Parameters
 do_training = False
 do_policy_test = True
-do_plots = True
+do_plots = False
 
 # Training parameters
-EPOCHS=20
+EPOCHS=5
 use_tensorflow = True
 base_dir = '.\out\\'
 
@@ -44,7 +42,7 @@ def make_env():
     """
     Creates a new Furuta Pendulum environment (swing-up)
     """
-    return custom_envs.furuta_swing_up.FurutaPendulumEnv()
+    return custom_envs.furuta_swing_up_paper.FurutaPendulumEnvPaper()
 
 def train_algorithm(algorithm_fn, output_dir, mlp_architecture=[64,64], activation_func=tf.nn.relu, 
                     max_ep_len=500, steps_per_epoch=4000, epochs=EPOCHS, seed=0):
@@ -159,7 +157,7 @@ def main():
         },
     ]
 
-    architecture_to_use = ["64_64_relu", "64_64_tanh"] # 256_128_relu
+    architecture_to_use = ["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
     architectures = []
     for arch_dict in all_architectures:
         if arch_dict['name'] in architecture_to_use:
