@@ -10,7 +10,7 @@ https://mit-license.org/
 The latter was published under the 3-Clause BSD License:
 https://opensource.org/licenses/BSD-3-Clause
 
-Last edit: 2022-02-23
+Last edit: 2022-02-24
 By: dansah
 """
 
@@ -84,4 +84,12 @@ class FurutaPendulumEnvPaper(custom_envs.furuta_swing_up_base.FurutaPendulumEnv)
         observed_state = self._get_observed_state_from_internal(internal_state)
         terminal = self._terminal_reached()
 
-        return (observed_state, reward, terminal, {})
+        # Needed for Baselines, at least A2C.
+        self.epinfo['r'] += reward
+        self.epinfo['l'] += 1
+        if terminal:
+            info_dict = {'episode': self.epinfo}
+        else:
+            info_dict = {}
+
+        return (observed_state, reward, terminal, info_dict)

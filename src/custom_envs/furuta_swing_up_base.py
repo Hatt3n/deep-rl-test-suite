@@ -10,7 +10,7 @@ https://mit-license.org/
 The latter was published under the 3-Clause BSD License:
 https://opensource.org/licenses/BSD-3-Clause
 
-Last edit: 2022-02-23
+Last edit: 2022-02-24
 By: dansah
 """
 
@@ -99,6 +99,7 @@ class FurutaPendulumEnv(gym.core.Env):
             "furuta_ode": deps.ipm_python.furuta.FurutaODE(wrap_angles=self.wrap_angles),
         }
         self.internal_state["furuta_ode"].init(theta0=self.START_THETA)
+        self.epinfo = {'r': np.float16(0), 'l': np.int16(0)}
 
         return self._get_observed_state_from_internal(self._get_internal_state())
 

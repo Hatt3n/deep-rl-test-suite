@@ -1,7 +1,7 @@
 """
 File for testing the Furuta pendulum swing-up task.
 
-Last edit: 2022-02-23
+Last edit: 2022-02-24
 By: dansah
 """
 
@@ -28,12 +28,12 @@ import numpy as np
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 # High-level Parameters
-do_training = False
-do_policy_test = True
-do_plots = True
+do_training = True
+do_policy_test = False
+do_plots = False
 
 # Training parameters
-EPOCHS=30
+EPOCHS=2
 use_tensorflow = True
 base_dir = '.\out\\'
 
@@ -52,7 +52,7 @@ def make_env_r():
     return custom_envs.furuta_swing_up_paper_r.FurutaPendulumEnvPaperRecurrent()
 
 def train_algorithm(algorithm_fn, env_fn, output_dir, mlp_architecture=[64,64], activation_func=tf.nn.relu, 
-                    max_ep_len=500, steps_per_epoch=4000, epochs=EPOCHS, seed=0):
+                    max_ep_len=500, steps_per_epoch=4000, epochs=EPOCHS, seed=0): # NOTE: max_ep_len is actually 501.
     """
     Trains the given algorithm. The output is saved in the provided output directory.
     Nothing is returned.
@@ -131,7 +131,13 @@ def main():
     else:
         from spinup import ddpg_pytorch as ddpg
         from spinup import ppo_pytorch as ppo
+    from baselines.a2c.a2c import a2c as a2c
     all_algorithms = [
+        {
+            "name": "a2c",
+            "alg_fn": a2c,
+            "env" : make_env,
+        },
         {
             "name": "ddpg",
             "alg_fn": ddpg,
@@ -176,7 +182,7 @@ def main():
         },
     ]
 
-    algorithms_to_use = ["ddpg", "ppo", "ddpg_r"]
+    algorithms_to_use = ["a2c"] #["ddpg", "ppo", "ddpg_r"]
     algorithms = []
     for alg_dict in all_algorithms:
         if alg_dict['name'] in algorithms_to_use:
