@@ -27,13 +27,19 @@ import numpy as np
 #import os
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
+# Things to try:
+# 1. Normalize reward
+# 2. Early exit to avoid solutions that are obviously bad
+# 3. Check whether to train all algorithms for the same amount of epochs.
+#    Can choose whether to compare based on number of interactions or number of updates.
+
 # High-level Parameters
 do_training = False
 do_policy_test = True
-do_plots = False
+do_plots = True
 
 # Training parameters
-EPOCHS=2
+EPOCHS=30
 use_tensorflow = True
 base_dir = '.\out\\'
 
