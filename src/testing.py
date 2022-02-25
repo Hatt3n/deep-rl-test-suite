@@ -1,7 +1,7 @@
 """
 File for testing the Furuta pendulum swing-up task.
 
-Last edit: 2022-02-24
+Last edit: 2022-02-25
 By: dansah
 """
 
@@ -28,8 +28,8 @@ import numpy as np
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 # High-level Parameters
-do_training = True
-do_policy_test = False
+do_training = False
+do_policy_test = True
 do_plots = False
 
 # Training parameters
@@ -51,6 +51,9 @@ def make_env_r():
     """
     return custom_envs.furuta_swing_up_paper_r.FurutaPendulumEnvPaperRecurrent()
 
+def create_ac_kwargs(mlp_architecture=[64,64], activation_func=tf.nn.relu):
+    return dict(hidden_sizes=mlp_architecture, activation=activation_func)
+
 def train_algorithm(algorithm_fn, env_fn, output_dir, mlp_architecture=[64,64], activation_func=tf.nn.relu, 
                     max_ep_len=500, steps_per_epoch=4000, epochs=EPOCHS, seed=0): # NOTE: max_ep_len is actually 501.
     """
@@ -58,7 +61,7 @@ def train_algorithm(algorithm_fn, env_fn, output_dir, mlp_architecture=[64,64], 
     Nothing is returned.
     """
     # Based on example from https://spinningup.openai.com/en/latest/user/running.html
-    ac_kwargs = dict(hidden_sizes=mlp_architecture, activation=activation_func) # TODO: Configure initializer independently for algorithms. TODO: Investigae why activation is null.
+    ac_kwargs = create_ac_kwargs(mlp_architecture, activation_func)
     logger_kwargs = dict(output_dir=output_dir, exp_name='experiment_test0_' + output_dir)
     
     if use_tensorflow:
@@ -71,16 +74,55 @@ def train_algorithm(algorithm_fn, env_fn, output_dir, mlp_architecture=[64,64], 
         algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=steps_per_epoch, 
                      epochs=epochs, logger_kwargs=logger_kwargs, seed=seed)
 
-def evaluate_algorithm(output_dir):
+def evaluate_algorithm(alg_dict, arch_dict):
     """
     Evaluate a trained algorithm by applying it and rendering the result.
     """
-    itr = -1
-    env, get_action = spinup.utils.test_policy.load_policy_and_env(output_dir,
-                                                                   itr if itr >=0 else 'last',
-                                                                   False) # Deterministic true/false. Only used by the SAC algorithm.
-    spinup.utils.test_policy.run_policy(env, get_action, max_ep_len=500, num_episodes=2, render=True)
-    env.close()
+    output_dir = get_output_dir(alg_dict['name'], arch_dict['name'])
+    if alg_dict['type'] == 'spinup':
+        itr = -1
+        env, get_action = spinup.utils.test_policy.load_policy_and_env(output_dir,
+                                                                       itr if itr >=0 else 'last',
+                                                                       False) # Deterministic true/false. Only used by the SAC algorithm.
+        spinup.utils.test_policy.run_policy(env, get_action, max_ep_len=500, num_episodes=2, render=True)
+        env.close()
+    elif alg_dict['type'] == 'baselines':
+
+        model = alg_dict['alg_fn'](env_fn=alg_dict['env'], ac_kwargs=create_ac_kwargs(arch_dict['layers'], get_activation_by_name(arch_dict['activation'])), 
+                                   load_path=output_dir)
+        # Based on code from the file https://github.com/openai/baselines/blob/master/baselines/run.py
+        from baselines import logger
+        from baselines.common.vec_env.dummy_vec_env import VecEnv, DummyVecEnv
+        from baselines.common import tf_util
+        logger.log("Running trained model")
+        env = DummyVecEnv(env_fns=[alg_dict['env']])
+        obs = env.reset()
+
+        state = model.initial_state if hasattr(model, 'initial_state') else None
+        dones = np.zeros((1,))
+
+        current_episode = 0
+        num_episodes = 2
+        episode_rew = np.zeros(env.num_envs) if isinstance(env, VecEnv) else np.zeros(1)
+        while current_episode < num_episodes:
+            if state is not None:
+                actions, _, state, _ = model.step(obs,S=state, M=dones)
+            else:
+                actions, _, _, _ = model.step(obs)
+
+            obs, rew, done, _ = env.step(actions)
+            episode_rew += rew
+            env.render()
+            done_any = done.any() if isinstance(done, np.ndarray) else done
+            if done_any:
+                current_episode += 1
+                for i in np.nonzero(done)[0]:
+                    print('episode_rew={}'.format(episode_rew[i]))
+                    episode_rew[i] = 0
+        env.close()
+        tf_util.get_session().close()
+    else:
+        raise NotImplementedError("No handler for algorithm type %s" % (alg_dict['type']))
 
 def annonuce_message(message):
     """
@@ -137,21 +179,25 @@ def main():
             "name": "a2c",
             "alg_fn": a2c,
             "env" : make_env,
+            "type": "baselines",
         },
         {
             "name": "ddpg",
             "alg_fn": ddpg,
             "env": make_env,
+            "type": "spinup",
         },
         {
             "name": "ppo",
             "alg_fn": ppo,
             "env": make_env,
+            "type": "spinup",
         },
         {
             "name": "ddpg_r",
             "alg_fn": ddpg,
             "env": make_env_r,
+            "type": "spinup",
         },
     ]
     all_architectures = [
@@ -182,7 +228,7 @@ def main():
         },
     ]
 
-    algorithms_to_use = ["a2c"] #["ddpg", "ppo", "ddpg_r"]
+    algorithms_to_use = ["a2c", "ddpg", "ppo", "ddpg_r"]
     algorithms = []
     for alg_dict in all_algorithms:
         if alg_dict['name'] in algorithms_to_use:
@@ -211,12 +257,11 @@ def main():
             annonuce_message("Now testing %s" % (name))
             for arch_dict in architectures:
                 heads_up_message("Using arch %s" % (arch_dict['name']))
-                output_dir = get_output_dir(name, arch_dict['name'])
                 if use_tensorflow:
                     with tf.Graph().as_default():
-                        evaluate_algorithm(output_dir)
+                        evaluate_algorithm(alg_dict, arch_dict)
                 else:
-                    evaluate_algorithm(output_dir)
+                    evaluate_algorithm(alg_dict, arch_dict)
 
     if do_plots:
         dirs = []
