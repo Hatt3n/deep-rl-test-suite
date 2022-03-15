@@ -34,9 +34,9 @@ import numpy as np
 #    Can choose whether to compare based on number of interactions or number of updates.
 
 # High-level Parameters
-do_training = True
+do_training = False
 do_policy_test = False
-do_plots = False
+do_plots = True
 
 # Training parameters
 EPOCHS=5

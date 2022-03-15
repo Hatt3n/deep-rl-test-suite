@@ -11,8 +11,10 @@ from deps.SLM_Lab.slm_lab.experiment import analysis
 from deps.SLM_Lab.slm_lab.lib import logger, util
 
 import numpy as np
+from spinup.utils.logx import EpochLogger
 import os
 import pydash as ps
+import time
 import torch
 
 def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, 
@@ -119,7 +121,7 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
     #action = a2c_agent.act(np.array([1, 2, 3, 4, 5]))
     #print("Took action %s" % action)
 
-    SLM_Trainer(a2c_agent, env, spec).run_rl()
+    SLM_Trainer(a2c_agent, env, spec).run_rl(logger_kwargs=logger_kwargs)
     env.close()
 
 # Based on control.py in src\deps\SLM_Lab\slm_lab\experiment
@@ -130,8 +132,17 @@ class SLM_Trainer():
         self.spec = spec
         self.index = self.spec['meta']['session']
     
-    def run_rl(self):
+    def run_rl(self, logger_kwargs=dict()):
         '''Run the main RL loop until clock.max_frame'''
+        # Spinup logger
+        do_extra_logging = util.in_train_lab_mode()
+        if do_extra_logging:
+            sp_logger = EpochLogger(**logger_kwargs)
+            tstart = time.time()
+            latest_epoch = self.agent.performed_epochs()
+            env_interactions = 0
+
+        # Standard
         logger.info(f'Running RL loop for trial {self.spec["meta"]["trial"]} session {self.index}')
         clock = self.env.clock
         state = self.env.reset()
@@ -143,6 +154,12 @@ class SLM_Trainer():
                     clock.tick('epi')
                     state = self.env.reset()
                     done = False
+                # Update counters (Based on runner.py in src\baselines\baselines\a2c)
+                if do_extra_logging:
+                    maybeepinfo = info.get('episode')
+                    if maybeepinfo:
+                        env_interactions += maybeepinfo['l']
+                        sp_logger.store(EpRet=maybeepinfo['r'], EpLen=maybeepinfo['l'])
             self.try_ckpt(self.agent, self.env)
             if clock.get() >= clock.max_frame:  # finish
                 break
@@ -152,6 +169,23 @@ class SLM_Trainer():
             next_state, reward, done, info = self.env.step(action)
             self.agent.update(state, action, reward, next_state, done)
             state = next_state
+
+            if do_extra_logging and (latest_epoch != self.agent.performed_epochs()):
+                latest_epoch = self.agent.performed_epochs()
+                sp_logger.log_tabular('Epoch', latest_epoch)
+                sp_logger.log_tabular('EpRet', with_min_and_max=True)
+                sp_logger.log_tabular('EpLen', average_only=True)
+                #sp_logger.log_tabular('VVals', with_min_and_max=True)
+                sp_logger.log_tabular('TotalEnvInteracts', env_interactions)
+                #sp_logger.log_tabular('LossPi', average_only=True)
+                #sp_logger.log_tabular('LossV', float(value_loss))
+                #sp_logger.log_tabular('DeltaLossPi', average_only=True)
+                #sp_logger.log_tabular('DeltaLossV', average_only=True)
+                #sp_logger.log_tabular('Entropy', average_only=True)
+                #sp_logger.log_tabular('ClipFrac', average_only=True)
+                #sp_logger.log_tabular('StopIter', average_only=True)
+                sp_logger.log_tabular('Time', time.time()-tstart)
+                sp_logger.dump_tabular()
 
     def to_ckpt(self, env, mode='eval'):
         '''Check with clock whether to run log/eval ckpt: at the start, save_freq, and the end'''

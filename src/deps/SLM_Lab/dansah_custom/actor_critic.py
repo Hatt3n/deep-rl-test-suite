@@ -73,6 +73,7 @@ class ActorCritic(Reinforce):
     @lab_api
     def init_algorithm_params(self):
         '''Initialize other algorithm parameters'''
+        self.performed_epochs = 0 # Count the number of times the parameters have been updated
         # set default
         util.set_attr(self, dict(
             action_pdtype='default',
@@ -293,6 +294,8 @@ class ActorCritic(Reinforce):
                 self.net.train_step(policy_loss, self.optim, self.lr_scheduler, clock=clock, global_net=self.global_net)
                 self.critic_net.train_step(val_loss, self.critic_optim, self.critic_lr_scheduler, clock=clock, global_net=self.global_critic_net)
                 loss = policy_loss + val_loss
+            # Update counters
+            self.performed_epochs += 1
             # reset
             self.to_train = 0
             logger.debug(f'Trained {self.name} at epi: {clock.epi}, frame: {clock.frame}, t: {clock.t}, total_reward so far: {self.body.env.total_reward}, loss: {loss:g}')

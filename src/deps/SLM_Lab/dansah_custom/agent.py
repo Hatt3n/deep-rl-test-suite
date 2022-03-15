@@ -36,6 +36,10 @@ class Agent:
         self.algorithm = AlgorithmClass(self, global_nets)
 
         logger.info(util.self_desc(self))
+    
+    def performed_epochs(self):
+        '''Get the number of times the parameters have been updated.'''
+        return self.algorithm.performed_epochs
 
     @lab_api
     def act(self, state):
