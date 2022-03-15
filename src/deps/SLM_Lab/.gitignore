@@ -1,0 +1,37 @@
+# System
+.DS_Store
+
+# IDEs
+.idea/
+.vscode
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg*
+*.manifest
+.pytest*
+.cache
+dist/
+src/
+htmlcov/
+coverage.xml
+.coverage*
+.env
+.mypy_cache
+
+# NodeJS
+node_modules/
+
+# VizDoom
+*.ini
+
+# Data files
+data/
+model/
+nb.py
+*.html
+*.log
+*.meta
+SLM-Env
