@@ -1,5 +1,7 @@
 # Custom
-src/deps/
+src/deps/baselines
+src/deps/spinningup
+src/deps/ipm_python
 tmp/
 out*/
 

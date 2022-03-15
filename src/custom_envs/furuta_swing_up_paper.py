@@ -84,12 +84,13 @@ class FurutaPendulumEnvPaper(custom_envs.furuta_swing_up_base.FurutaPendulumEnv)
         observed_state = self._get_observed_state_from_internal(internal_state)
         terminal = self._terminal_reached()
 
-        # Needed for Baselines, at least A2C.
+        # Add information needed for Baselines (at least A2C) and SLM Lab.
         self.epinfo['r'] += reward
         self.epinfo['l'] += 1
+        info_dict = {
+            'total_reward': self.epinfo['r']
+        }
         if terminal:
-            info_dict = {'episode': self.epinfo}
-        else:
-            info_dict = {}
+            info_dict['episode'] = self.epinfo
 
         return (observed_state, reward, terminal, info_dict)

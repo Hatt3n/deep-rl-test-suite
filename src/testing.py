@@ -1,7 +1,7 @@
 """
 File for testing the Furuta pendulum swing-up task.
 
-Last edit: 2022-02-25
+Last edit: 2022-03-15
 By: dansah
 """
 
@@ -23,7 +23,7 @@ import numpy as np
 #tf.enable_eager_execution()
 #import copy
 
-# CPU-Only <- Actually results in better performance
+# CPU-Only <- Can result in better performance
 #import os
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
@@ -34,12 +34,12 @@ import numpy as np
 #    Can choose whether to compare based on number of interactions or number of updates.
 
 # High-level Parameters
-do_training = False
-do_policy_test = True
-do_plots = True
+do_training = True
+do_policy_test = False
+do_plots = False
 
 # Training parameters
-EPOCHS=30
+EPOCHS=5
 use_tensorflow = True
 base_dir = '.\out\\'
 
@@ -60,23 +60,31 @@ def make_env_r():
 def create_ac_kwargs(mlp_architecture=[64,64], activation_func=tf.nn.relu):
     return dict(hidden_sizes=mlp_architecture, activation=activation_func)
 
-def train_algorithm(algorithm_fn, env_fn, output_dir, mlp_architecture=[64,64], activation_func=tf.nn.relu, 
-                    max_ep_len=500, steps_per_epoch=4000, epochs=EPOCHS, seed=0): # NOTE: max_ep_len is actually 501.
+def train_algorithm(alg_dict, arch_dict, max_ep_len=501, steps_per_epoch=4000, epochs=EPOCHS, seed=0): # NOTE: max_ep_len is actually 501.
     """
-    Trains the given algorithm. The output is saved in the provided output directory.
+    Trains the given algorithm. The output is saved in the output directory
+    returned by get_output_dir.
     Nothing is returned.
     """
+    output_dir = get_output_dir(alg_dict['name'], arch_dict['name'])
+
     # Based on example from https://spinningup.openai.com/en/latest/user/running.html
-    ac_kwargs = create_ac_kwargs(mlp_architecture, activation_func)
+    ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation']))
     logger_kwargs = dict(output_dir=output_dir, exp_name='experiment_test0_' + output_dir)
+
+    algorithm_fn = alg_dict['alg_fn']
+    env_fn = alg_dict['env']
     
-    if use_tensorflow:
+    if (use_tensorflow and alg_dict['type'] == 'spinup') or alg_dict['type'] == 'baselines':
         with tf.Graph().as_default():
             algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=steps_per_epoch, 
                          epochs=epochs, logger_kwargs=logger_kwargs, seed=seed)
         #tf.get_default_session().close()
         #tf.reset_default_graph()
     else:
+        if alg_dict['type'] == 'slm':
+            ac_kwargs['activation_name'] = arch_dict['activation']
+            ac_kwargs['rel_output_dir'] = output_dir.replace(base_dir, "")
         algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=steps_per_epoch, 
                      epochs=epochs, logger_kwargs=logger_kwargs, seed=seed)
 
@@ -93,7 +101,6 @@ def evaluate_algorithm(alg_dict, arch_dict):
         spinup.utils.test_policy.run_policy(env, get_action, max_ep_len=500, num_episodes=2, render=True)
         env.close()
     elif alg_dict['type'] == 'baselines':
-
         model = alg_dict['alg_fn'](env_fn=alg_dict['env'], ac_kwargs=create_ac_kwargs(arch_dict['layers'], get_activation_by_name(arch_dict['activation'])), 
                                    load_path=output_dir)
         # Based on code from the file https://github.com/openai/baselines/blob/master/baselines/run.py
@@ -127,6 +134,12 @@ def evaluate_algorithm(alg_dict, arch_dict):
                     episode_rew[i] = 0
         env.close()
         tf_util.get_session().close()
+    elif alg_dict['type'] == 'slm':
+        ac_kwargs = create_ac_kwargs(arch_dict['layers'], get_activation_by_name(arch_dict['activation']))
+        ac_kwargs['activation_name'] = arch_dict['activation']
+        ac_kwargs['rel_output_dir'] = output_dir.replace(base_dir, "")
+        alg_dict['alg_fn'](env_fn=alg_dict['env'], ac_kwargs=ac_kwargs, max_ep_len=501, steps_per_epoch=501, 
+                           epochs=3, logger_kwargs=dict(), seed=0, mode='enjoy')
     else:
         raise NotImplementedError("No handler for algorithm type %s" % (alg_dict['type']))
 
@@ -180,7 +193,14 @@ def main():
         from spinup import ddpg_pytorch as ddpg
         from spinup import ppo_pytorch as ppo
     from baselines.a2c.a2c import a2c as a2c
+    from deps.SLM_Lab.dansah_custom.a2c import a2c as a2c_s
     all_algorithms = [
+        {
+            "name": "a2c_s",
+            "alg_fn": a2c_s,
+            "env": make_env,
+            "type": "slm",
+        },
         {
             "name": "a2c",
             "alg_fn": a2c,
@@ -234,7 +254,7 @@ def main():
         },
     ]
 
-    algorithms_to_use = ["a2c", "ddpg", "ppo", "ddpg_r"]
+    algorithms_to_use = ["a2c_s"]#, "ddpg", "ppo", "ddpg_r"]
     algorithms = []
     for alg_dict in all_algorithms:
         if alg_dict['name'] in algorithms_to_use:
@@ -249,17 +269,14 @@ def main():
     if do_training:
         for alg_dict in algorithms:
             name = alg_dict['name']
-            alg_fn = alg_dict['alg_fn']
             annonuce_message("Now training with %s" % (name))
             for arch_dict in architectures:
                 heads_up_message("Using arch %s" % (arch_dict['name']))
-                train_algorithm(alg_fn, alg_dict['env'], get_output_dir(name, arch_dict['name']), mlp_architecture=arch_dict['layers'], 
-                                activation_func=get_activation_by_name(arch_dict['activation']))
+                train_algorithm(alg_dict, arch_dict)
 
     if do_policy_test:
         for alg_dict in algorithms:
             name = alg_dict['name']
-            alg_fn = alg_dict['alg_fn']
             annonuce_message("Now testing %s" % (name))
             for arch_dict in architectures:
                 heads_up_message("Using arch %s" % (arch_dict['name']))
