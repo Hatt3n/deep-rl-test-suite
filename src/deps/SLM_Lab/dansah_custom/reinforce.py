@@ -1,3 +1,10 @@
+"""
+A customized version of the Reinforce algorithm, including 
+the addition of compliance with the Spin Up type of API.
+
+Customized by dansah.
+"""
+
 from deps.SLM_Lab.slm_lab.agent import net
 from deps.SLM_Lab.dansah_custom import policy_util
 from deps.SLM_Lab.slm_lab.agent.algorithm.base import Algorithm
@@ -7,7 +14,96 @@ from deps.SLM_Lab.slm_lab.lib.decorator import lab_api
 import numpy as np
 import torch
 
+from deps.SLM_Lab.dansah_custom.agent import Agent, Body
+from deps.SLM_Lab.dansah_custom.env_wrapper import EnvWrapper
+from deps.SLM_Lab.dansah_custom.SLM_Trainer import SLM_Trainer
+
+import os
+
 logger = logger.get_logger(__name__)
+
+def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, 
+        epochs, logger_kwargs, seed, mode='train'):
+    """
+    mode: Should be 'train' or 'enjoy'.
+    """
+    os.environ['lab_mode'] = mode
+
+    spec = {
+        "name": "reinforce_furuta_spec",
+        "agent": [{
+            "name": "Reinforce",
+            "algorithm": {
+                "name": "Reinforce",
+                "action_pdtype": "default",
+                "action_policy": "default", # "epsilon_greedy", # TODO: Provide parameters.
+                "center_return": True,
+                "explore_var_spec": None,
+                "gamma": 0.99,
+                "entropy_coef_spec": {
+                    "name": "linear_decay",
+                    "start_val": 0.01,
+                    "end_val": 0.001,
+                    "start_step": 0,
+                    "end_step": 20000,
+                },
+                "training_frequency": steps_per_epoch # OnPolicyReplay trains every X episodes.
+            },
+            "memory": {
+                "name": "OnPolicyReplay"
+            },
+            "net": {
+                "type": "MLPNet",
+                "hid_layers": ac_kwargs['hidden_sizes'],
+                "hid_layers_activation": ac_kwargs['activation_name'],
+                "clip_grad_val": None,
+                "loss_spec": {
+                    "name": "MSELoss"
+                },
+                "optim_spec": {
+                    "name": "Adam",
+                    "lr": 0.002
+                },
+                "lr_scheduler_spec": None
+            }
+        }],
+        "env": [{
+            #"name": "FurutaPendulum",
+            "num_envs": 1,
+            "max_t": max_ep_len,
+            "max_frame": ac_kwargs['min_env_interactions'],
+        }],
+        "body": {
+            "product": "outer",
+            "num": 1
+        },
+        "meta": {
+            "distributed": False,
+            "eval_frequency": steps_per_epoch*max_ep_len if util.in_train_lab_mode() else max_ep_len, # Since it trains every X episodes.
+            "log_frequency": steps_per_epoch*max_ep_len if util.in_train_lab_mode() else max_ep_len,
+            "max_session": 4,
+            "max_trial": 1,
+            "resume": False,
+            "rigorous_eval": False,
+            "session": 0,
+            "trial": 0,
+            "model_prepath": "..\\..\\..\\out\\%sslm" % ac_kwargs['rel_output_dir'],
+            "info_prepath":  "..\\..\\..\\out\\%sslm" % ac_kwargs['rel_output_dir'],
+        },
+        #"search": {
+        #    "agent": [{
+        #        "algorithm": {
+        #        "gamma__grid_search": [0.1, 0.5, 0.7, 0.8, 0.90, 0.99, 0.999]
+        #        }
+        #    }]
+        #}
+    }
+
+    env = EnvWrapper(env_fn, spec)
+    agent = Agent(spec, Body(env, spec))
+
+    SLM_Trainer(agent, env, spec).run_rl(logger_kwargs=logger_kwargs)
+    env.close()
 
 
 class Reinforce(Algorithm):
@@ -44,6 +140,7 @@ class Reinforce(Algorithm):
     @lab_api
     def init_algorithm_params(self):
         '''Initialize other algorithm parameters'''
+        self.performed_epochs = 0 # Count the number of times the parameters have been updated
         # set default
         util.set_attr(self, dict(
             action_pdtype='default',
@@ -155,6 +252,8 @@ class Reinforce(Algorithm):
             advs = self.calc_ret_advs(batch)
             loss = self.calc_policy_loss(batch, pdparams, advs)
             self.net.train_step(loss, self.optim, self.lr_scheduler, clock=clock, global_net=self.global_net)
+            # Update counters
+            self.performed_epochs += 1
             # reset
             self.to_train = 0
             logger.debug(f'Trained {self.name} at epi: {clock.epi}, frame: {clock.frame}, t: {clock.t}, total_reward so far: {self.body.env.total_reward}, loss: {loss:g}')

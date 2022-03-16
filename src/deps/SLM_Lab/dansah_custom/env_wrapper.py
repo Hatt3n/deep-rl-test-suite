@@ -1,6 +1,8 @@
 """
+Wraps an OpenAI environment so that it works with
+SLM Lab algorithms.
 
-By dansah.
+Added by dansah.
 """
 
 from deps.SLM_Lab.slm_lab.env.base import Clock

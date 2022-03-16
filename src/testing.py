@@ -1,7 +1,7 @@
 """
 File for testing the Furuta pendulum swing-up task.
 
-Last edit: 2022-03-15
+Last edit: 2022-03-16
 By: dansah
 """
 
@@ -11,12 +11,10 @@ import custom_envs.furuta_swing_up_paper_r
 import spinup.utils.test_policy
 import spinup.utils.plot
 
-import torch
 import torch.nn as nn
 
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
-import gym
 import numpy as np
 
 # Eager execution is required for deep copy. However, tf.placeholder() won't work with eager execution...
@@ -33,34 +31,48 @@ import numpy as np
 # 3. Check whether to train all algorithms for the same amount of epochs.
 #    Can choose whether to compare based on number of interactions or number of updates.
 
-# High-level Parameters
+#########################
+# High-level Parameters #
+#########################
 do_training = False
-do_policy_test = False
+do_policy_test = True
 do_plots = True
 
-# Training parameters
-EPOCHS=5
-use_tensorflow = True
-base_dir = '.\out\\'
+#######################
+# Training parameters #
+#######################
+EPOCHS=5                                # The number of parameter updates to perform before stopping trainin. NOTE: Should no longer be used.
+MIN_ENV_INTERACTIONS = EPOCHS * 4000    # The minimum number of interactions the agents should perform before stopping training.
+use_tensorflow = True                   # Whether to use the Tensorflow versions of the algorithms (if available).
+base_dir = '.\out\\'                    # The base directory for storing the output of the algorithms.
 
 #from collections import OrderedDict
 
 def make_env():
     """
-    Creates a new Furuta Pendulum environment (swing-up)
+    Creates a new Furuta Pendulum environment (swing-up).
     """
     return custom_envs.furuta_swing_up_paper.FurutaPendulumEnvPaper()
 
 def make_env_r():
     """
-    Creates a new Furuta Pendulum environment (swing-up)
+    Creates a new Furuta Pendulum environment (swing-up),
+    where one of the values in the observed state is the previous input to the environment.
     """
     return custom_envs.furuta_swing_up_paper_r.FurutaPendulumEnvPaperRecurrent()
 
-def create_ac_kwargs(mlp_architecture=[64,64], activation_func=tf.nn.relu):
-    return dict(hidden_sizes=mlp_architecture, activation=activation_func)
+def create_ac_kwargs(mlp_architecture=[64,64], activation_func=tf.nn.relu, arch_dict=dict(), output_dir="", slm_type=False):
+    """
+    Creates the ac_kwargs dictionary used by the algorithms (primarily the Spin Up ones).
+    If slm_type is True, some extra key-value pairs are added that SLM algorithms use.
+    """
+    ac_kwargs = dict(hidden_sizes=mlp_architecture, activation=activation_func)
+    if slm_type:
+        ac_kwargs['activation_name'] = arch_dict['activation']
+        ac_kwargs['rel_output_dir'] = output_dir.replace(base_dir, "")
+    return ac_kwargs
 
-def train_algorithm(alg_dict, arch_dict, max_ep_len=501, steps_per_epoch=4000, epochs=EPOCHS, seed=0): # NOTE: max_ep_len is actually 501.
+def train_algorithm(alg_dict, arch_dict, max_ep_len=501, epochs=EPOCHS, seed=0): # NOTE: max_ep_len is actually 501.
     """
     Trains the given algorithm. The output is saved in the output directory
     returned by get_output_dir.
@@ -74,6 +86,8 @@ def train_algorithm(alg_dict, arch_dict, max_ep_len=501, steps_per_epoch=4000, e
 
     algorithm_fn = alg_dict['alg_fn']
     env_fn = alg_dict['env']
+
+    steps_per_epoch = alg_dict['training_frequency']
     
     if (use_tensorflow and alg_dict['type'] == 'spinup') or alg_dict['type'] == 'baselines':
         with tf.Graph().as_default():
@@ -83,8 +97,9 @@ def train_algorithm(alg_dict, arch_dict, max_ep_len=501, steps_per_epoch=4000, e
         #tf.reset_default_graph()
     else:
         if alg_dict['type'] == 'slm':
-            ac_kwargs['activation_name'] = arch_dict['activation']
-            ac_kwargs['rel_output_dir'] = output_dir.replace(base_dir, "")
+            ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation']), 
+                                         arch_dict=arch_dict, output_dir=output_dir, slm_type=True)
+            ac_kwargs['min_env_interactions'] = MIN_ENV_INTERACTIONS
         algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=steps_per_epoch, 
                      epochs=epochs, logger_kwargs=logger_kwargs, seed=seed)
 
@@ -135,9 +150,9 @@ def evaluate_algorithm(alg_dict, arch_dict):
         env.close()
         tf_util.get_session().close()
     elif alg_dict['type'] == 'slm':
-        ac_kwargs = create_ac_kwargs(arch_dict['layers'], get_activation_by_name(arch_dict['activation']))
-        ac_kwargs['activation_name'] = arch_dict['activation']
-        ac_kwargs['rel_output_dir'] = output_dir.replace(base_dir, "")
+        ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation']), 
+                                arch_dict=arch_dict, output_dir=output_dir, slm_type=True)
+        ac_kwargs['min_env_interactions'] = 3*501 # 3 epochs
         alg_dict['alg_fn'](env_fn=alg_dict['env'], ac_kwargs=ac_kwargs, max_ep_len=501, steps_per_epoch=501, 
                            epochs=3, logger_kwargs=dict(), seed=0, mode='enjoy')
     else:
@@ -194,36 +209,49 @@ def main():
         from spinup import ppo_pytorch as ppo
     from baselines.a2c.a2c import a2c as a2c
     from deps.SLM_Lab.dansah_custom.a2c import a2c as a2c_s
+    from deps.SLM_Lab.dansah_custom.reinforce import reinforce
     all_algorithms = [
         {
-            "name": "a2c_s",
-            "alg_fn": a2c_s,
-            "env": make_env,
-            "type": "slm",
+            "name": "a2c_s", # The name of the algorithm. Must be unique, but could be any String without whitespace.
+            "alg_fn": a2c_s, # Function that trains an agent using the algorithm. Should comply with the Spin Up API.
+            "env": make_env, # Function that returns a new OpenAI Gym environment instance.
+            "type": "slm", # Species the implementation type/origin of the algorithm.
+            "training_frequency": 4000, # How often updates are performed. NOTE: Could be in terms of experiences or episodes; this depends on the algorithm.
         },
         {
             "name": "a2c",
             "alg_fn": a2c,
             "env" : make_env,
             "type": "baselines",
+            "training_frequency": 4000,
         },
         {
             "name": "ddpg",
             "alg_fn": ddpg,
             "env": make_env,
             "type": "spinup",
+            "training_frequency": 4000,
         },
         {
             "name": "ppo",
             "alg_fn": ppo,
             "env": make_env,
             "type": "spinup",
+            "training_frequency": 4000,
         },
         {
             "name": "ddpg_r",
             "alg_fn": ddpg,
             "env": make_env_r,
             "type": "spinup",
+            "training_frequency": 4000,
+        },
+        {
+            "name": "reinforce",
+            "alg_fn": reinforce,
+            "env": make_env,
+            "type": "slm",
+            "training_frequency": 1,
         },
     ]
     all_architectures = [
@@ -254,7 +282,7 @@ def main():
         },
     ]
 
-    algorithms_to_use = ["a2c_s"]#, "ddpg", "ppo", "ddpg_r"]
+    algorithms_to_use = ["reinforce"]#, "a2c_s", "ddpg", "ppo", "ddpg_r"]
     algorithms = []
     for alg_dict in all_algorithms:
         if alg_dict['name'] in algorithms_to_use:
