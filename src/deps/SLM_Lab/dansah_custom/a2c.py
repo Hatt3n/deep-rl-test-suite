@@ -11,10 +11,15 @@ from deps.SLM_Lab.dansah_custom.SLM_Trainer import SLM_Trainer
 import os
 
 def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, 
-        epochs, logger_kwargs, seed, mode='train'):
+        epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train'):
     """
     mode: Should be 'train' or 'enjoy'.
     """
+    # TODO: Actuall use the seed
+
+    if min_env_interactions == 0:
+        min_env_interactions = epochs * steps_per_epoch
+
     spec = { # Based on a2c_gae_cartpole.json in src\deps\SLM_Lab\slm_lab\spec\benchmark\a2c
         "name": "a2c_furuta_spec",
         "agent": [{
@@ -73,7 +78,7 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
             #"name": "FurutaPendulum",
             "num_envs": 1,
             "max_t": max_ep_len,
-            "max_frame": steps_per_epoch*epochs,
+            "max_frame": min_env_interactions,
         }],
         "body": {
             "product": "outer",

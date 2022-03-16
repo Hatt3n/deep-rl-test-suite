@@ -26,27 +26,29 @@ import numpy as np
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 # Things to try:
-# 1. Normalize reward
+# 1. Normalize reward and observable states
 # 2. Early exit to avoid solutions that are obviously bad
-# 3. Check whether to train all algorithms for the same amount of epochs.
-#    Can choose whether to compare based on number of interactions or number of updates.
 
 #########################
 # High-level Parameters #
 #########################
-do_training = False
+do_training = True
 do_policy_test = True
 do_plots = True
 
 #######################
 # Training parameters #
 #######################
-EPOCHS=5                                # The number of parameter updates to perform before stopping trainin. NOTE: Should no longer be used.
+EPOCHS=2                                # The number of parameter updates to perform before stopping trainin. NOTE: Should no longer be used.
 MIN_ENV_INTERACTIONS = EPOCHS * 4000    # The minimum number of interactions the agents should perform before stopping training.
 use_tensorflow = True                   # Whether to use the Tensorflow versions of the algorithms (if available).
 base_dir = '.\out\\'                    # The base directory for storing the output of the algorithms.
 
-#from collections import OrderedDict
+####################
+# Important values #
+####################
+MAX_EP_LEN = 501
+
 
 def make_env():
     """
@@ -72,7 +74,7 @@ def create_ac_kwargs(mlp_architecture=[64,64], activation_func=tf.nn.relu, arch_
         ac_kwargs['rel_output_dir'] = output_dir.replace(base_dir, "")
     return ac_kwargs
 
-def train_algorithm(alg_dict, arch_dict, max_ep_len=501, epochs=EPOCHS, seed=0): # NOTE: max_ep_len is actually 501.
+def train_algorithm(alg_dict, arch_dict, max_ep_len=MAX_EP_LEN, seed=0): # NOTE: max_ep_len is actually 501.
     """
     Trains the given algorithm. The output is saved in the output directory
     returned by get_output_dir.
@@ -81,27 +83,22 @@ def train_algorithm(alg_dict, arch_dict, max_ep_len=501, epochs=EPOCHS, seed=0):
     output_dir = get_output_dir(alg_dict['name'], arch_dict['name'])
 
     # Based on example from https://spinningup.openai.com/en/latest/user/running.html
-    ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation']))
+    ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation']), 
+                                 arch_dict=arch_dict, output_dir=output_dir, slm_type=(alg_dict['type'] == 'slm'))
     logger_kwargs = dict(output_dir=output_dir, exp_name='experiment_test0_' + output_dir)
 
     algorithm_fn = alg_dict['alg_fn']
     env_fn = alg_dict['env']
-
-    steps_per_epoch = alg_dict['training_frequency']
     
     if (use_tensorflow and alg_dict['type'] == 'spinup') or alg_dict['type'] == 'baselines':
         with tf.Graph().as_default():
-            algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=steps_per_epoch, 
-                         epochs=epochs, logger_kwargs=logger_kwargs, seed=seed)
+            algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=alg_dict['training_frequency'], 
+                         min_env_interactions=MIN_ENV_INTERACTIONS, logger_kwargs=logger_kwargs, seed=seed)
         #tf.get_default_session().close()
         #tf.reset_default_graph()
     else:
-        if alg_dict['type'] == 'slm':
-            ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation']), 
-                                         arch_dict=arch_dict, output_dir=output_dir, slm_type=True)
-            ac_kwargs['min_env_interactions'] = MIN_ENV_INTERACTIONS
-        algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=steps_per_epoch, 
-                     epochs=epochs, logger_kwargs=logger_kwargs, seed=seed)
+        algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=alg_dict['training_frequency'], 
+                     min_env_interactions=MIN_ENV_INTERACTIONS, logger_kwargs=logger_kwargs, seed=seed)
 
 def evaluate_algorithm(alg_dict, arch_dict):
     """
@@ -113,7 +110,7 @@ def evaluate_algorithm(alg_dict, arch_dict):
         env, get_action = spinup.utils.test_policy.load_policy_and_env(output_dir,
                                                                        itr if itr >=0 else 'last',
                                                                        False) # Deterministic true/false. Only used by the SAC algorithm.
-        spinup.utils.test_policy.run_policy(env, get_action, max_ep_len=500, num_episodes=2, render=True)
+        spinup.utils.test_policy.run_policy(env, get_action, max_ep_len=MAX_EP_LEN, num_episodes=2, render=True)
         env.close()
     elif alg_dict['type'] == 'baselines':
         model = alg_dict['alg_fn'](env_fn=alg_dict['env'], ac_kwargs=create_ac_kwargs(arch_dict['layers'], get_activation_by_name(arch_dict['activation'])), 
@@ -151,10 +148,9 @@ def evaluate_algorithm(alg_dict, arch_dict):
         tf_util.get_session().close()
     elif alg_dict['type'] == 'slm':
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation']), 
-                                arch_dict=arch_dict, output_dir=output_dir, slm_type=True)
-        ac_kwargs['min_env_interactions'] = 3*501 # 3 epochs
-        alg_dict['alg_fn'](env_fn=alg_dict['env'], ac_kwargs=ac_kwargs, max_ep_len=501, steps_per_epoch=501, 
-                           epochs=3, logger_kwargs=dict(), seed=0, mode='enjoy')
+                                     arch_dict=arch_dict, output_dir=output_dir, slm_type=True)
+        alg_dict['alg_fn'](env_fn=alg_dict['env'], ac_kwargs=ac_kwargs, max_ep_len=MAX_EP_LEN, steps_per_epoch=MAX_EP_LEN, 
+                           min_env_interactions=2*MAX_EP_LEN, logger_kwargs=dict(), seed=0, mode='enjoy')
     else:
         raise NotImplementedError("No handler for algorithm type %s" % (alg_dict['type']))
 
@@ -212,10 +208,10 @@ def main():
     from deps.SLM_Lab.dansah_custom.reinforce import reinforce
     all_algorithms = [
         {
-            "name": "a2c_s", # The name of the algorithm. Must be unique, but could be any String without whitespace.
-            "alg_fn": a2c_s, # Function that trains an agent using the algorithm. Should comply with the Spin Up API.
-            "env": make_env, # Function that returns a new OpenAI Gym environment instance.
-            "type": "slm", # Species the implementation type/origin of the algorithm.
+            "name": "a2c_s",            # The name of the algorithm. Must be unique, but could be any String without whitespace.
+            "alg_fn": a2c_s,            # Function that trains an agent using the algorithm. Should comply with the Spin Up API.
+            "env": make_env,            # Function that returns a new OpenAI Gym environment instance.
+            "type": "slm",              # Species the implementation type/origin of the algorithm.
             "training_frequency": 4000, # How often updates are performed. NOTE: Could be in terms of experiences or episodes; this depends on the algorithm.
         },
         {
@@ -282,7 +278,7 @@ def main():
         },
     ]
 
-    algorithms_to_use = ["reinforce"]#, "a2c_s", "ddpg", "ppo", "ddpg_r"]
+    algorithms_to_use = ["reinforce", "a2c_s", "a2c", "ddpg", "ppo", "ddpg_r"]
     algorithms = []
     for alg_dict in all_algorithms:
         if alg_dict['name'] in algorithms_to_use:

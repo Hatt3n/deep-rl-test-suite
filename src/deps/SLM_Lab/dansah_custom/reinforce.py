@@ -23,11 +23,17 @@ import os
 logger = logger.get_logger(__name__)
 
 def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, 
-        epochs, logger_kwargs, seed, mode='train'):
+              epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train'):
     """
     mode: Should be 'train' or 'enjoy'.
     """
+    # TODO: Actuall use the seed
+    
     os.environ['lab_mode'] = mode
+
+    if min_env_interactions == 0:
+        min_env_interactions = epochs * steps_per_epoch * max_ep_len # NOTE: Since an episode can be shorter than max_ep_len, the real number of epochs
+                                                                     # could be larger than intended.
 
     spec = {
         "name": "reinforce_furuta_spec",
@@ -71,7 +77,7 @@ def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
             #"name": "FurutaPendulum",
             "num_envs": 1,
             "max_t": max_ep_len,
-            "max_frame": ac_kwargs['min_env_interactions'],
+            "max_frame": min_env_interactions,
         }],
         "body": {
             "product": "outer",
