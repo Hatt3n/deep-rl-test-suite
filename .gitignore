@@ -2,6 +2,7 @@
 src/deps/baselines
 src/deps/spinningup
 src/deps/ipm_python
+!src/deps/SLM_Lab/slm_lab/agent/env
 tmp/
 out*/
 
