@@ -27,7 +27,7 @@ def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
     """
     mode: Should be 'train' or 'enjoy'.
     """
-    # TODO: Actuall use the seed
+    # TODO: Actually use the seed
     
     os.environ['lab_mode'] = mode
 
