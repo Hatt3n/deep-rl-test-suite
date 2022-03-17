@@ -30,7 +30,7 @@ class FurutaPendulumEnv(gym.core.Env):
     """
     
     # Optional
-    metadata = {"render.modes": ["ansi"]} # Considering adding "human"
+    metadata = {"render.modes": ["ansi", "human"]}
     #reward_range = (-float("inf"), float("inf"))
     #spec = None
 
@@ -49,6 +49,7 @@ class FurutaPendulumEnv(gym.core.Env):
         self.np_random = None # Not needed in modern versions of OpenAI Gym
 
         self.wrap_angles = wrap_angles
+        self.is_discrete = False # Used by SLM Lab
     
     def seed(self, seed=None): # Not needed in modern versions of OpenAI Gym
         if seed is not None or self.np_random is None:

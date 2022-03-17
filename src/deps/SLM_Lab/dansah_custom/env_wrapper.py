@@ -20,7 +20,7 @@ class EnvWrapper():
         self.observation_space = self.env.observation_space
         self.observable_dim = self._get_observable_dim(self.observation_space)
         self.action_dim = self._get_action_dim(self.action_space)
-        self.is_discrete = False # None of the environments are discrete
+        self.is_discrete = self.env.is_discrete
         self.is_venv = False # Only one environment at a time
         self.total_reward = np.nan
         self.to_render = util.in_eval_lab_mode()

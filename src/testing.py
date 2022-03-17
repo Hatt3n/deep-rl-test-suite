@@ -1,11 +1,12 @@
 """
 File for testing the Furuta pendulum swing-up task.
 
-Last edit: 2022-03-16
+Last edit: 2022-03-17
 By: dansah
 """
 
 import custom_envs.furuta_swing_up_paper
+import custom_envs.furuta_swing_up_paper_disc
 import custom_envs.furuta_swing_up_paper_r
 
 import spinup.utils.test_policy
@@ -29,6 +30,11 @@ import numpy as np
 # 1. Normalize reward and observable states
 # 2. Early exit to avoid solutions that are obviously bad
 
+# Things to fix/adjust:
+# 1. min_env_interactions is treated as min by baselines-algorithms and Spin-Up (seemingly),
+#    but not by e.g. SLM Lab algorithms, in the sense that they don't train for
+#    >= min_env_interactions steps, they just experience that many steps.
+
 #########################
 # High-level Parameters #
 #########################
@@ -39,8 +45,8 @@ do_plots = True
 #######################
 # Training parameters #
 #######################
-EPOCHS=2                                # The number of parameter updates to perform before stopping trainin. NOTE: Should no longer be used.
-MIN_ENV_INTERACTIONS = EPOCHS * 4000    # The minimum number of interactions the agents should perform before stopping training.
+EPOCHS=5                                # The number of parameter updates to perform before stopping trainin. NOTE: Should no longer be used.
+MIN_ENV_INTERACTIONS = EPOCHS * 4008+1  # The minimum number of interactions the agents should perform before stopping training.
 use_tensorflow = True                   # Whether to use the Tensorflow versions of the algorithms (if available).
 base_dir = '.\out\\'                    # The base directory for storing the output of the algorithms.
 
@@ -55,6 +61,13 @@ def make_env():
     Creates a new Furuta Pendulum environment (swing-up).
     """
     return custom_envs.furuta_swing_up_paper.FurutaPendulumEnvPaper()
+
+def make_env_disc():
+    """
+    Creates a new Furuta Pendulum environment (swing-up),
+    where the action space is continuous.
+    """
+    return custom_envs.furuta_swing_up_paper_disc.FurutaPendulumEnvPaperDisc()
 
 def make_env_r():
     """
@@ -206,41 +219,49 @@ def main():
     from baselines.a2c.a2c import a2c as a2c
     from deps.SLM_Lab.dansah_custom.a2c import a2c as a2c_s
     from deps.SLM_Lab.dansah_custom.reinforce import reinforce
+    from deps.SLM_Lab.dansah_custom.dqn import dqn
     all_algorithms = [
         {
             "name": "a2c_s",            # The name of the algorithm. Must be unique, but could be any String without whitespace.
             "alg_fn": a2c_s,            # Function that trains an agent using the algorithm. Should comply with the Spin Up API.
             "env": make_env,            # Function that returns a new OpenAI Gym environment instance.
             "type": "slm",              # Species the implementation type/origin of the algorithm.
-            "training_frequency": 4000, # How often updates are performed. NOTE: Could be in terms of experiences or episodes; this depends on the algorithm.
+            "training_frequency": 4008, # How often updates are performed. NOTE: Could be in terms of experiences or episodes; this depends on the algorithm.
         },
         {
             "name": "a2c",
             "alg_fn": a2c,
             "env" : make_env,
             "type": "baselines",
-            "training_frequency": 4000,
+            "training_frequency": 4008,
         },
         {
             "name": "ddpg",
             "alg_fn": ddpg,
             "env": make_env,
             "type": "spinup",
-            "training_frequency": 4000,
-        },
-        {
-            "name": "ppo",
-            "alg_fn": ppo,
-            "env": make_env,
-            "type": "spinup",
-            "training_frequency": 4000,
+            "training_frequency": 4008,
         },
         {
             "name": "ddpg_r",
             "alg_fn": ddpg,
             "env": make_env_r,
             "type": "spinup",
-            "training_frequency": 4000,
+            "training_frequency": 4008,
+        },
+        {
+            "name": "dqn",
+            "alg_fn": dqn,
+            "env": make_env_disc,
+            "type": "slm",
+            "training_frequency": 4008,
+        },
+        {
+            "name": "ppo",
+            "alg_fn": ppo,
+            "env": make_env,
+            "type": "spinup",
+            "training_frequency": 4008,
         },
         {
             "name": "reinforce",
@@ -278,7 +299,7 @@ def main():
         },
     ]
 
-    algorithms_to_use = ["reinforce", "a2c_s", "a2c", "ddpg", "ppo", "ddpg_r"]
+    algorithms_to_use = ["dqn", "reinforce", "a2c_s", "a2c", "ddpg", "ppo", "ddpg_r"]
     algorithms = []
     for alg_dict in all_algorithms:
         if alg_dict['name'] in algorithms_to_use:
