@@ -1,7 +1,6 @@
 # Custom
 src/deps/baselines
 src/deps/ipm_python
-!src/deps/SLM_Lab/slm_lab/agent/env
 tmp/
 out*/
 
@@ -21,7 +20,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+#lib/
 lib64/
 parts/
 sdist/
@@ -113,7 +112,7 @@ celerybeat.pid
 .venv
 #env/
 venv/
-ENV/
+#ENV/
 env.bak/
 venv.bak/
 
