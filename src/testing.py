@@ -1,13 +1,9 @@
 """
 File for testing the Furuta pendulum swing-up task.
 
-Last edit: 2022-03-17
+Last edit: 2022-03-18
 By: dansah
 """
-
-import custom_envs.furuta_swing_up_paper
-import custom_envs.furuta_swing_up_paper_disc
-import custom_envs.furuta_swing_up_paper_r
 
 import spinup.utils.test_policy
 import spinup.utils.plot
@@ -38,14 +34,14 @@ import numpy as np
 #########################
 # High-level Parameters #
 #########################
-do_training = True
+do_training = False
 do_policy_test = True
 do_plots = True
 
 #######################
 # Training parameters #
 #######################
-EPOCHS=5                                # The number of parameter updates to perform before stopping trainin. NOTE: Should no longer be used.
+EPOCHS=30                               # The number of parameter updates to perform before stopping trainin. NOTE: This value is not necessarily respected by all algorithms
 MIN_ENV_INTERACTIONS = EPOCHS * 4008+1  # The minimum number of interactions the agents should perform before stopping training.
 use_tensorflow = True                   # Whether to use the Tensorflow versions of the algorithms (if available).
 base_dir = '.\out\\'                    # The base directory for storing the output of the algorithms.
@@ -60,21 +56,32 @@ def make_env():
     """
     Creates a new Furuta Pendulum environment (swing-up).
     """
-    return custom_envs.furuta_swing_up_paper.FurutaPendulumEnvPaper()
+    from custom_envs.furuta_swing_up_paper import FurutaPendulumEnvPaper
+    return FurutaPendulumEnvPaper()
+
+def make_env_norm():
+    """
+    Creates a new Furuta Pendulum environment (swing-up),
+    where the observation space is normalized.
+    """
+    from custom_envs.furuta_swing_up_norm import FurutaPendulumEnvPaperNorm
+    return FurutaPendulumEnvPaperNorm()
 
 def make_env_disc():
     """
     Creates a new Furuta Pendulum environment (swing-up),
     where the action space is continuous.
     """
-    return custom_envs.furuta_swing_up_paper_disc.FurutaPendulumEnvPaperDisc()
+    from custom_envs.env_util import DiscretizingEnvironmentWrapper
+    return DiscretizingEnvironmentWrapper(make_env)
 
 def make_env_r():
     """
     Creates a new Furuta Pendulum environment (swing-up),
     where one of the values in the observed state is the previous input to the environment.
     """
-    return custom_envs.furuta_swing_up_paper_r.FurutaPendulumEnvPaperRecurrent()
+    from custom_envs.furuta_swing_up_paper_r import FurutaPendulumEnvPaperRecurrent
+    return FurutaPendulumEnvPaperRecurrent()
 
 def create_ac_kwargs(mlp_architecture=[64,64], activation_func=tf.nn.relu, arch_dict=dict(), output_dir="", slm_type=False):
     """
@@ -236,6 +243,13 @@ def main():
             "training_frequency": 4008,
         },
         {
+            "name": "ddpg_n",
+            "alg_fn": ddpg,
+            "env": make_env_norm,
+            "type": "spinup",
+            "training_frequency": 4008,
+        },
+        {
             "name": "ddpg",
             "alg_fn": ddpg,
             "env": make_env,
@@ -299,7 +313,7 @@ def main():
         },
     ]
 
-    algorithms_to_use = ["dqn", "reinforce", "a2c_s", "a2c", "ddpg", "ppo", "ddpg_r"]
+    algorithms_to_use = ["ddpg_n"] #["dqn", "reinforce", "a2c_s", "a2c", "ddpg", "ppo", "ddpg_r"]
     algorithms = []
     for alg_dict in all_algorithms:
         if alg_dict['name'] in algorithms_to_use:
