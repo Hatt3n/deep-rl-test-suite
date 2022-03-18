@@ -1,8 +1,8 @@
 # Custom
-src/deps/baselines
 src/deps/ipm_python
 tmp/
 out*/
+data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
