@@ -1,7 +1,7 @@
 """
 File for testing the Furuta pendulum swing-up task.
 
-Last edit: 2022-03-21
+Last edit: 2022-03-22
 By: dansah
 """
 
@@ -13,6 +13,7 @@ import torch.nn as nn
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 import numpy as np
+import os
 
 # Eager execution is required for deep copy. However, tf.placeholder() won't work with eager execution...
 #tf.enable_eager_execution()
@@ -35,6 +36,7 @@ import numpy as np
 # 1. min_env_interactions is treated as min by baselines-algorithms and Spin-Up (seemingly),
 #    but not by e.g. SLM Lab algorithms, in the sense that they don't train for
 #    >= min_env_interactions steps, they just experience that many steps.
+# 2. On macOS, when plotting, the closed environments' windows will open up again.
 
 #########################
 # High-level Parameters #
@@ -46,10 +48,10 @@ do_plots = True
 #######################
 # Training parameters #
 #######################
-EPOCHS=30                               # The number of parameter updates to perform before stopping trainin. NOTE: This value is not necessarily respected by all algorithms
-MIN_ENV_INTERACTIONS = EPOCHS * 4008+1  # The minimum number of interactions the agents should perform before stopping training.
-use_tensorflow = True                   # Whether to use the Tensorflow versions of the algorithms (if available).
-base_dir = '.\out\\'                    # The base directory for storing the output of the algorithms.
+EPOCHS=2                                        # The number of parameter updates to perform before stopping trainin. NOTE: This value is not necessarily respected by all algorithms
+MIN_ENV_INTERACTIONS = EPOCHS * 4008+1          # The minimum number of interactions the agents should perform before stopping training.
+use_tensorflow = True                           # Whether to use the Tensorflow versions of the algorithms (if available).
+base_dir = os.path.join('.', 'out%s' % os.sep)  # The base directory for storing the output of the algorithms.
 
 ####################
 # Important values #
@@ -208,7 +210,7 @@ def get_output_dir(alg_name, arch_name):
     Returns the approriate output directory name relative to the
     project root for the given experiment.
     """
-    return base_dir + alg_name + '\\' + arch_name + '\\'
+    return os.path.join(base_dir + alg_name, arch_name + os.sep)
 
 def get_activation_by_name(activation_name):
     """
@@ -328,7 +330,7 @@ def main():
         },
     ]
 
-    algorithms_to_use = ["ddpg_n"] # ["ddpg_n", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg_r"]
+    algorithms_to_use = ["ddpg_n"] #["ddpg_n", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg_r"]
     algorithms = []
     for alg_dict in all_algorithms:
         if alg_dict['name'] in algorithms_to_use:

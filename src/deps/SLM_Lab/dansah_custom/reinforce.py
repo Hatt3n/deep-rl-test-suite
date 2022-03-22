@@ -93,8 +93,8 @@ def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
             "rigorous_eval": False,
             "session": 0,
             "trial": 0,
-            "model_prepath": "..\\..\\..\\out\\%sslm" % ac_kwargs['rel_output_dir'],
-            "info_prepath":  "..\\..\\..\\out\\%sslm" % ac_kwargs['rel_output_dir'],
+            "model_prepath": os.path.join('..', '..', '..', 'out', '%sslm' % ac_kwargs['rel_output_dir']),
+            "info_prepath":  os.path.join('..', '..', '..', 'out', '%sslm' % ac_kwargs['rel_output_dir']),
         },
         #"search": {
         #    "agent": [{
