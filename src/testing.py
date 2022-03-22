@@ -41,14 +41,14 @@ import os
 #########################
 # High-level Parameters #
 #########################
-do_training = False
+do_training = True
 do_policy_test = True
 do_plots = True
 
 #######################
 # Training parameters #
 #######################
-EPOCHS=2                                        # The number of parameter updates to perform before stopping trainin. NOTE: This value is not necessarily respected by all algorithms
+EPOCHS=10                                       # The number of parameter updates to perform before stopping trainin. NOTE: This value is not necessarily respected by all algorithms
 MIN_ENV_INTERACTIONS = EPOCHS * 4008+1          # The minimum number of interactions the agents should perform before stopping training.
 use_tensorflow = True                           # Whether to use the Tensorflow versions of the algorithms (if available).
 base_dir = os.path.join('.', 'out%s' % os.sep)  # The base directory for storing the output of the algorithms.
@@ -240,7 +240,7 @@ def main():
     else:
         from spinup import ddpg_pytorch as ddpg
         from spinup import ppo_pytorch as ppo
-    from baselines.a2c.a2c import a2c as a2c
+    from deps.baselines.dansah_custom.a2c import a2c
     from deps.SLM_Lab.dansah_custom.a2c import a2c as a2c_s
     from deps.SLM_Lab.dansah_custom.reinforce import reinforce
     from deps.SLM_Lab.dansah_custom.dqn import dqn
@@ -330,7 +330,7 @@ def main():
         },
     ]
 
-    algorithms_to_use = ["ddpg_n"] #["ddpg_n", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg_r"]
+    algorithms_to_use = ["a2c"] #["ddpg_n", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg_r"]
     algorithms = []
     for alg_dict in all_algorithms:
         if alg_dict['name'] in algorithms_to_use:
