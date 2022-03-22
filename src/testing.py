@@ -1,7 +1,7 @@
 """
 File for testing the Furuta pendulum swing-up task.
 
-Last edit: 2022-03-18
+Last edit: 2022-03-21
 By: dansah
 """
 
@@ -23,8 +23,13 @@ import numpy as np
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 # Things to try:
-# 1. Normalize reward and observable states
-# 2. Early exit to avoid solutions that are obviously bad
+# 1. Normalize reward and observable states <- Done, but needs adjustment. The
+#    agents should use the TD update rule "V(s)=r" when terminated due to non-
+#    timeout reasons and "V(s)=r+gamma*V(s')" otherwise, as discussed in
+#    Time Limits in Reinforcement Learning by F. Pardo et al. (2018)
+# 2. Early exit to avoid solutions that are obviously bad <- Done, but could
+#    be adjusted; when should we exit and for what reasons?
+# 3. Compare different reward-functions.
 
 # Things to fix/adjust:
 # 1. min_env_interactions is treated as min by baselines-algorithms and Spin-Up (seemingly),
@@ -62,7 +67,8 @@ def make_env():
 def make_env_norm():
     """
     Creates a new Furuta Pendulum environment (swing-up),
-    where the observation space is normalized.
+    where the observation space and rewards are normalized
+    (to an extent).
     """
     from custom_envs.furuta_swing_up_norm import FurutaPendulumEnvPaperNorm
     return FurutaPendulumEnvPaperNorm()
@@ -70,10 +76,19 @@ def make_env_norm():
 def make_env_disc():
     """
     Creates a new Furuta Pendulum environment (swing-up),
-    where the action space is continuous.
+    where the action space is discrete.
     """
     from custom_envs.env_util import DiscretizingEnvironmentWrapper
     return DiscretizingEnvironmentWrapper(make_env)
+
+def make_env_norm_disc():
+    """
+    Creates a new Furuta Pendulum environment (swing-up),
+    where the action space is discrete, and the states and
+    rewards are (to an extent) normalized.
+    """
+    from custom_envs.env_util import DiscretizingEnvironmentWrapper
+    return DiscretizingEnvironmentWrapper(make_env_norm)
 
 def make_env_r():
     """
@@ -231,14 +246,14 @@ def main():
         {
             "name": "a2c_s",            # The name of the algorithm. Must be unique, but could be any String without whitespace.
             "alg_fn": a2c_s,            # Function that trains an agent using the algorithm. Should comply with the Spin Up API.
-            "env": make_env,            # Function that returns a new OpenAI Gym environment instance.
+            "env": make_env_norm,       # Function that returns a new OpenAI Gym environment instance.
             "type": "slm",              # Species the implementation type/origin of the algorithm.
             "training_frequency": 4008, # How often updates are performed. NOTE: Could be in terms of experiences or episodes; this depends on the algorithm.
         },
         {
             "name": "a2c",
             "alg_fn": a2c,
-            "env" : make_env,
+            "env" : make_env_norm,
             "type": "baselines",
             "training_frequency": 4008,
         },
@@ -266,21 +281,21 @@ def main():
         {
             "name": "dqn",
             "alg_fn": dqn,
-            "env": make_env_disc,
+            "env": make_env_norm_disc,
             "type": "slm",
             "training_frequency": 4008,
         },
         {
             "name": "ppo",
             "alg_fn": ppo,
-            "env": make_env,
+            "env": make_env_norm,
             "type": "spinup",
             "training_frequency": 4008,
         },
         {
             "name": "reinforce",
             "alg_fn": reinforce,
-            "env": make_env,
+            "env": make_env_norm,
             "type": "slm",
             "training_frequency": 1,
         },
@@ -313,7 +328,7 @@ def main():
         },
     ]
 
-    algorithms_to_use = ["ddpg_n"] #["dqn", "reinforce", "a2c_s", "a2c", "ddpg", "ppo", "ddpg_r"]
+    algorithms_to_use = ["ddpg_n"] # ["ddpg_n", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg_r"]
     algorithms = []
     for alg_dict in all_algorithms:
         if alg_dict['name'] in algorithms_to_use:
