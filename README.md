@@ -11,8 +11,8 @@ The following software must be installed before the installation can be performe
 
 # Installation
 1. Open a terminal window in the [src]() folder.
-2. Go to [src/spinningup/](src/spinningup/) and run `pip install -e .`
-3. Go to [src/baselines/](src/baselines/) and run `pip install -e .`
+2. Go to [src/deps/spinningup/](src/deps/spinningup/) and run `pip install -e .`
+3. Go to [src/deps/baselines/](src/deps/baselines/) and run `pip install -e .`
 4. Put ipm-python in src/deps/ and rename it to ipm_python
 5. There are functions defined within functions in src/deps/ipm_python/furuta.py, which will cause the Pickler to crash. To fix this, the code must manually be rewritten so that they become stand-alone.
 6. It might be necessary to 
