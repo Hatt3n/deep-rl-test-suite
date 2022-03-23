@@ -257,6 +257,17 @@ class ActorCritic(Reinforce):
             v_preds = math_util.venv_pack(v_preds, self.body.env.num_envs)
             next_v_pred = next_v_pred.unsqueeze(dim=0)
         v_preds_all = torch.cat((v_preds, next_v_pred), dim=0)
+        for idx, timeout in enumerate(batch['rfts']):
+            if timeout == 1:
+                # Bootstrap when terminating due to timelimit, as in Time Limits in Reinforcement Learning by F. Pardo et al. (2018)
+                tmp_next_states = batch['next_states'][idx]
+                if not self.body.env.is_venv:
+                    tmp_next_states = next_states.unsqueeze(dim=0)
+                with torch.no_grad():
+                    tmp_next_v_pred = self.calc_v(tmp_next_states, use_cache=False)
+                if self.body.env.is_venv:
+                    tmp_next_v_pred = tmp_next_v_pred.unsqueeze(dim=0)
+                batch['rewards'][idx] += self.gamma * tmp_next_v_pred[0]
         advs = math_util.calc_gaes(batch['rewards'], batch['dones'], v_preds_all, self.gamma, self.lam)
         v_targets = advs + v_preds
         advs = math_util.standardize(advs)  # standardize only for advs, not v_targets

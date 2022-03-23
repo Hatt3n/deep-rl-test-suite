@@ -1,6 +1,6 @@
 # The agent module
 from deps.SLM_Lab import dansah_custom
-from deps.SLM_Lab.slm_lab.agent import memory
+from deps.SLM_Lab.dansah_custom import memory
 from deps.SLM_Lab.dansah_custom import policy_util
 from deps.SLM_Lab.slm_lab.agent.net import net_util
 from deps.SLM_Lab.slm_lab.lib import logger, util, viz
@@ -49,12 +49,12 @@ class Agent:
         return action
 
     @lab_api
-    def update(self, state, action, reward, next_state, done):
+    def update(self, state, action, reward, next_state, done, rft):
         '''Update per timestep after env transitions, e.g. memory, algorithm, update agent params, train net'''
         self.body.update(state, action, reward, next_state, done)
         if util.in_eval_lab_mode():  # eval does not update agent for training
             return
-        self.body.memory.update(state, action, reward, next_state, done)
+        self.body.memory.update(state, action, reward, next_state, done, rft)
         loss = self.algorithm.train()
         if not np.isnan(loss):  # set for log_summary()
             self.body.loss = loss

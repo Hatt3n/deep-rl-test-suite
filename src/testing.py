@@ -330,13 +330,13 @@ def main():
         },
     ]
 
-    algorithms_to_use = ["a2c"] #["ddpg_n", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg_r"]
+    algorithms_to_use = ["a2c_s"] #["ddpg_n", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg_r"]
     algorithms = []
     for alg_dict in all_algorithms:
         if alg_dict['name'] in algorithms_to_use:
             algorithms.append(alg_dict)
 
-    architecture_to_use = ["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
+    architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
     architectures = []
     for arch_dict in all_architectures:
         if arch_dict['name'] in architecture_to_use:

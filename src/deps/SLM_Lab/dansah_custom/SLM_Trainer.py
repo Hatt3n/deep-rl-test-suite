@@ -49,7 +49,8 @@ class SLM_Trainer():
             with torch.no_grad():
                 action = self.agent.act(state)
             next_state, reward, done, info = self.env.step(action)
-            self.agent.update(state, action, reward, next_state, done)
+            rft = 0 if not done else info['rft'] == 'timelimit'
+            self.agent.update(state, action, reward, next_state, done, rft)
             state = next_state
 
             if done and do_extra_logging:
