@@ -262,7 +262,7 @@ class ActorCritic(Reinforce):
                 # Bootstrap when terminating due to timelimit, as in Time Limits in Reinforcement Learning by F. Pardo et al. (2018)
                 tmp_next_states = batch['next_states'][idx]
                 if not self.body.env.is_venv:
-                    tmp_next_states = next_states.unsqueeze(dim=0)
+                    tmp_next_states = tmp_next_states.unsqueeze(dim=0)
                 with torch.no_grad():
                     tmp_next_v_pred = self.calc_v(tmp_next_states, use_cache=False)
                 if self.body.env.is_venv:
