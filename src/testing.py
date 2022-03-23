@@ -1,7 +1,7 @@
 """
 File for testing the Furuta pendulum swing-up task.
 
-Last edit: 2022-03-22
+Last edit: 2022-03-23
 By: dansah
 """
 
@@ -330,7 +330,7 @@ def main():
         },
     ]
 
-    algorithms_to_use = ["a2c_s"] #["ddpg_n", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg_r"]
+    algorithms_to_use = ["dqn"] #["ddpg_n", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg_r"]
     algorithms = []
     for alg_dict in all_algorithms:
         if alg_dict['name'] in algorithms_to_use:

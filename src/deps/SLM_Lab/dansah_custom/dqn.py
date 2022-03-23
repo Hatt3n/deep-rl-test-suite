@@ -309,7 +309,8 @@ class DQNBase(VanillaDQN):
         act_q_preds = q_preds.gather(-1, batch['actions'].long().unsqueeze(-1)).squeeze(-1)
         online_actions = online_next_q_preds.argmax(dim=-1, keepdim=True)
         max_next_q_preds = next_q_preds.gather(-1, online_actions).squeeze(-1)
-        max_q_targets = batch['rewards'] + self.gamma * (1 - batch['dones']) * max_next_q_preds
+        # Bootstrap when terminating due to timelimit, as in Time Limits in Reinforcement Learning by F. Pardo et al. (2018)
+        max_q_targets = batch['rewards'] + self.gamma * (1 - batch['dones'] + batch['rfts']) * max_next_q_preds
         logger.debug(f'act_q_preds: {act_q_preds}\nmax_q_targets: {max_q_targets}')
         q_loss = self.net.loss_fn(act_q_preds, max_q_targets)
 
