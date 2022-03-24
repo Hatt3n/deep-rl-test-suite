@@ -1,7 +1,7 @@
 """
 File for testing the Furuta pendulum swing-up task.
 
-Last edit: 2022-03-23
+Last edit: 2022-03-24
 By: dansah
 """
 
@@ -41,16 +41,15 @@ import os
 #########################
 # High-level Parameters #
 #########################
-do_training = True
+do_training = False
 do_policy_test = True
 do_plots = True
 
 #######################
 # Training parameters #
 #######################
-EPOCHS=10                                       # The number of parameter updates to perform before stopping trainin. NOTE: This value is not necessarily respected by all algorithms
+EPOCHS=2                                        # The number of parameter updates to perform before stopping trainin. NOTE: This value is not necessarily respected by all algorithms
 MIN_ENV_INTERACTIONS = EPOCHS * 4008+1          # The minimum number of interactions the agents should perform before stopping training.
-use_tensorflow = True                           # Whether to use the Tensorflow versions of the algorithms (if available).
 base_dir = os.path.join('.', 'out%s' % os.sep)  # The base directory for storing the output of the algorithms.
 
 ####################
@@ -58,7 +57,9 @@ base_dir = os.path.join('.', 'out%s' % os.sep)  # The base directory for storing
 ####################
 MAX_EP_LEN = 501
 
-
+#########################
+# Environment functions #
+#########################
 def make_env():
     """
     Creates a new Furuta Pendulum environment (swing-up).
@@ -100,6 +101,11 @@ def make_env_r():
     from custom_envs.furuta_swing_up_paper_r import FurutaPendulumEnvPaperRecurrent
     return FurutaPendulumEnvPaperRecurrent()
 
+
+
+
+
+
 def create_ac_kwargs(mlp_architecture=[64,64], activation_func=tf.nn.relu, arch_dict=dict(), output_dir="", slm_type=False):
     """
     Creates the ac_kwargs dictionary used by the algorithms (primarily the Spin Up ones).
@@ -111,23 +117,23 @@ def create_ac_kwargs(mlp_architecture=[64,64], activation_func=tf.nn.relu, arch_
         ac_kwargs['rel_output_dir'] = output_dir.replace(base_dir, "")
     return ac_kwargs
 
-def train_algorithm(alg_dict, arch_dict, max_ep_len=MAX_EP_LEN, seed=0): # NOTE: max_ep_len is actually 501.
+def train_algorithm(alg_dict, arch_dict, env_dict, max_ep_len=MAX_EP_LEN, seed=0): # NOTE: max_ep_len is actually 501.
     """
     Trains the given algorithm. The output is saved in the output directory
     returned by get_output_dir.
     Nothing is returned.
     """
-    output_dir = get_output_dir(alg_dict['name'], arch_dict['name'])
+    output_dir = get_output_dir(alg_dict['name'], arch_dict['name'], env_dict['name'])
 
     # Based on example from https://spinningup.openai.com/en/latest/user/running.html
-    ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation']), 
+    ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation'], use_torch=(alg_dict['type'] != 'baselines')), 
                                  arch_dict=arch_dict, output_dir=output_dir, slm_type=(alg_dict['type'] == 'slm'))
     logger_kwargs = dict(output_dir=output_dir, exp_name='experiment_test0_' + output_dir)
 
     algorithm_fn = alg_dict['alg_fn']
-    env_fn = alg_dict['env']
-    
-    if (use_tensorflow and alg_dict['type'] == 'spinup') or alg_dict['type'] == 'baselines':
+    env_fn = env_dict['env_fn'] if alg_dict['continuous'] else env_dict['env_fn_disc']
+
+    if alg_dict['type'] == 'baselines':
         with tf.Graph().as_default():
             algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=alg_dict['training_frequency'], 
                          min_env_interactions=MIN_ENV_INTERACTIONS, logger_kwargs=logger_kwargs, seed=seed)
@@ -137,11 +143,12 @@ def train_algorithm(alg_dict, arch_dict, max_ep_len=MAX_EP_LEN, seed=0): # NOTE:
         algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=alg_dict['training_frequency'], 
                      min_env_interactions=MIN_ENV_INTERACTIONS, logger_kwargs=logger_kwargs, seed=seed)
 
-def evaluate_algorithm(alg_dict, arch_dict):
+def evaluate_algorithm(alg_dict, arch_dict, env_dict):
     """
     Evaluate a trained algorithm by applying it and rendering the result.
     """
-    output_dir = get_output_dir(alg_dict['name'], arch_dict['name'])
+    env_fn = env_dict['env_fn'] if alg_dict['continuous'] else env_dict['env_fn_disc']
+    output_dir = get_output_dir(alg_dict['name'], arch_dict['name'], env_dict['name'])
     if alg_dict['type'] == 'spinup':
         itr = -1
         env, get_action = spinup.utils.test_policy.load_policy_and_env(output_dir,
@@ -150,14 +157,14 @@ def evaluate_algorithm(alg_dict, arch_dict):
         spinup.utils.test_policy.run_policy(env, get_action, max_ep_len=MAX_EP_LEN, num_episodes=2, render=True)
         env.close()
     elif alg_dict['type'] == 'baselines':
-        model = alg_dict['alg_fn'](env_fn=alg_dict['env'], ac_kwargs=create_ac_kwargs(arch_dict['layers'], get_activation_by_name(arch_dict['activation'])), 
+        model = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=create_ac_kwargs(arch_dict['layers'], get_activation_by_name(arch_dict['activation'], use_torch=False)), 
                                    load_path=output_dir)
         # Based on code from the file https://github.com/openai/baselines/blob/master/baselines/run.py
         from baselines import logger
         from baselines.common.vec_env.dummy_vec_env import VecEnv, DummyVecEnv
         from baselines.common import tf_util
         logger.log("Running trained model")
-        env = DummyVecEnv(env_fns=[alg_dict['env']])
+        env = DummyVecEnv(env_fns=[env_fn])
         obs = env.reset()
 
         state = model.initial_state if hasattr(model, 'initial_state') else None
@@ -184,9 +191,9 @@ def evaluate_algorithm(alg_dict, arch_dict):
         env.close()
         tf_util.get_session().close()
     elif alg_dict['type'] == 'slm':
-        ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation']), 
+        ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation'], use_torch=True), 
                                      arch_dict=arch_dict, output_dir=output_dir, slm_type=True)
-        alg_dict['alg_fn'](env_fn=alg_dict['env'], ac_kwargs=ac_kwargs, max_ep_len=MAX_EP_LEN, steps_per_epoch=MAX_EP_LEN, 
+        alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=MAX_EP_LEN, steps_per_epoch=MAX_EP_LEN, 
                            min_env_interactions=2*MAX_EP_LEN, logger_kwargs=dict(), seed=0, mode='enjoy')
     else:
         raise NotImplementedError("No handler for algorithm type %s" % (alg_dict['type']))
@@ -205,25 +212,25 @@ def heads_up_message(message):
     """
     print("----> %s <----" % (message))
 
-def get_output_dir(alg_name, arch_name):
+def get_output_dir(alg_name, arch_name, env_name):
     """
     Returns the approriate output directory name relative to the
     project root for the given experiment.
     """
-    return os.path.join(base_dir + alg_name, arch_name + os.sep)
+    return os.path.join(base_dir + env_name, alg_name, arch_name + os.sep)
 
-def get_activation_by_name(activation_name):
+def get_activation_by_name(activation_name, use_torch=True):
     """
     Takes the activation function by name as a string, returning
     the appropriate activation function in Tensorflow or Pytorch.
     """
     if activation_name == "relu":
-        if use_tensorflow:
+        if not use_torch:
             return tf.nn.relu
         else:
             return nn.ReLU
     elif activation_name == "tanh":
-        if use_tensorflow:
+        if not use_torch:
             return tf.nn.tanh
         else:
             return nn.Tanh
@@ -234,70 +241,69 @@ def main():
     """
     Runns all of the experiments.
     """
-    if use_tensorflow:
-        from spinup import ddpg_tf1 as ddpg
-        from spinup import ppo_tf1 as ppo
-    else:
-        from spinup import ddpg_pytorch as ddpg
-        from spinup import ppo_pytorch as ppo
+    from deps.spinningup.dansah_custom.ddpg import ddpg
+    from deps.spinningup.dansah_custom.ppo import ppo
     from deps.baselines.dansah_custom.a2c import a2c
     from deps.SLM_Lab.dansah_custom.a2c import a2c as a2c_s
     from deps.SLM_Lab.dansah_custom.reinforce import reinforce
     from deps.SLM_Lab.dansah_custom.dqn import dqn
+    all_environments = [
+        {
+            "name": "furuta_paper",
+            "env_fn": make_env,
+            "env_fn_disc": make_env_disc,
+        },
+        {
+            "name": "furuta_paper_r",
+            "env_fn": make_env_r,
+            "env_fn_disc": None,
+        },
+        {
+            "name": "furuta_paper_norm",
+            "env_fn": make_env_norm,
+            "env_fn_disc": make_env_norm_disc,
+        },
+    ]
     all_algorithms = [
         {
             "name": "a2c_s",            # The name of the algorithm. Must be unique, but could be any String without whitespace.
             "alg_fn": a2c_s,            # Function that trains an agent using the algorithm. Should comply with the Spin Up API.
-            "env": make_env_norm,       # Function that returns a new OpenAI Gym environment instance.
+            "continuous": True,         # Function that returns a new OpenAI Gym environment instance.
             "type": "slm",              # Species the implementation type/origin of the algorithm.
             "training_frequency": 4008, # How often updates are performed. NOTE: Could be in terms of experiences or episodes; this depends on the algorithm.
         },
         {
             "name": "a2c",
             "alg_fn": a2c,
-            "env" : make_env_norm,
+            "continuous": True,
             "type": "baselines",
-            "training_frequency": 4008,
-        },
-        {
-            "name": "ddpg_n",
-            "alg_fn": ddpg,
-            "env": make_env_norm,
-            "type": "spinup",
             "training_frequency": 4008,
         },
         {
             "name": "ddpg",
             "alg_fn": ddpg,
-            "env": make_env,
-            "type": "spinup",
-            "training_frequency": 4008,
-        },
-        {
-            "name": "ddpg_r",
-            "alg_fn": ddpg,
-            "env": make_env_r,
+            "continuous": True,
             "type": "spinup",
             "training_frequency": 4008,
         },
         {
             "name": "dqn",
             "alg_fn": dqn,
-            "env": make_env_norm_disc,
+            "continuous": False,
             "type": "slm",
             "training_frequency": 4008,
         },
         {
             "name": "ppo",
             "alg_fn": ppo,
-            "env": make_env_norm,
+            "continuous": True,
             "type": "spinup",
             "training_frequency": 4008,
         },
         {
             "name": "reinforce",
             "alg_fn": reinforce,
-            "env": make_env_norm,
+            "continuous": True,
             "type": "slm",
             "training_frequency": 1,
         },
@@ -329,51 +335,61 @@ def main():
             "activation": "relu"
         },
     ]
+    envs_to_use = ["furuta_paper", "furuta_paper_norm"]
+    envs = []
+    for env_dict in all_environments:
+        if env_dict['name'] in envs_to_use:
+            envs.append(env_dict)
 
-    algorithms_to_use = ["dqn"] #["ddpg_n", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg_r"]
+    algorithms_to_use = ["dqn", "a2c_s", "ddpg"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
     algorithms = []
     for alg_dict in all_algorithms:
         if alg_dict['name'] in algorithms_to_use:
             algorithms.append(alg_dict)
 
-    architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
+    architecture_to_use = ["64_64_relu", "256_128_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
     architectures = []
     for arch_dict in all_architectures:
         if arch_dict['name'] in architecture_to_use:
             architectures.append(arch_dict)
 
     if do_training:
-        for alg_dict in algorithms:
-            name = alg_dict['name']
-            annonuce_message("Now training with %s" % (name))
-            for arch_dict in architectures:
-                heads_up_message("Using arch %s" % (arch_dict['name']))
-                train_algorithm(alg_dict, arch_dict)
+        for env_dict in envs:
+            for alg_dict in algorithms:
+                name = alg_dict['name']
+                annonuce_message("Now training with %s in environment %s" % (name, env_dict['name']))
+                for arch_dict in architectures:
+                    heads_up_message("Using arch %s" % (arch_dict['name']))
+                    train_algorithm(alg_dict, arch_dict, env_dict)
 
     if do_policy_test:
-        for alg_dict in algorithms:
-            name = alg_dict['name']
-            annonuce_message("Now testing %s" % (name))
-            for arch_dict in architectures:
-                heads_up_message("Using arch %s" % (arch_dict['name']))
-                if use_tensorflow:
-                    with tf.Graph().as_default():
-                        evaluate_algorithm(alg_dict, arch_dict)
-                else:
-                    evaluate_algorithm(alg_dict, arch_dict)
+        for env_dict in envs:
+            for alg_dict in algorithms:
+                name = alg_dict['name']
+                annonuce_message("Now testing %s in environment %s" % (name, env_dict['name']))
+                for arch_dict in architectures:
+                    heads_up_message("Using arch %s" % (arch_dict['name']))
+                    if alg_dict['type'] == 'baselines':
+                        with tf.Graph().as_default():
+                            evaluate_algorithm(alg_dict, arch_dict, env_dict)
+                    else:
+                        evaluate_algorithm(alg_dict, arch_dict, env_dict)
 
     if do_plots:
         dirs = []
         alg_names = []
-        for alg_dict in algorithms:
-            alg_name = alg_dict['name']
-            for arch_dict in architectures:
-                arch_name = arch_dict['name']
-                dirs.append(get_output_dir(alg_name, arch_name))
-                alg_names.append(alg_name + ' ' + arch_name)
-        metrics = ['Performance']
-
-        spinup.utils.plot.make_plots(dirs, legend=alg_names, xaxis='TotalEnvInteracts', values=metrics, count=False, smooth=1, select=None, exclude=None, estimator='mean')
+        for env_dict in envs:
+            env_name = env_dict['name']
+            for alg_dict in algorithms:
+                alg_name = alg_dict['name']
+                for arch_dict in architectures:
+                    arch_name = arch_dict['name']
+                    dirs.append(get_output_dir(alg_name, arch_name, env_name))
+                    alg_names.append(alg_name + ' ' + arch_name)
+            # TODO: The later graphs should not "inherit" information from previous ones.
+            annonuce_message("Showing metrics for environment %s" % env_name)
+            metrics = ['Performance']
+            spinup.utils.plot.make_plots(dirs, legend=alg_names, xaxis='TotalEnvInteracts', values=metrics, count=False, smooth=1, select=None, exclude=None, estimator='mean')
 
 if __name__ == "__main__":
     main()

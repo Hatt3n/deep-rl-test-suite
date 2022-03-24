@@ -49,16 +49,19 @@ class SLM_Trainer():
             with torch.no_grad():
                 action = self.agent.act(state)
             next_state, reward, done, info = self.env.step(action)
-            rft = 0 if not done else info['rft'] == 'timelimit'
-            self.agent.update(state, action, reward, next_state, done, rft)
-            state = next_state
-
+            rft = 0
             if done and do_extra_logging:
                 # Update counters (Based on runner.py in src\baselines\baselines\a2c)
                 maybeepinfo = info.get('episode')
                 if maybeepinfo:
                     env_interactions += maybeepinfo['l']
-                    sp_logger.store(EpRet=maybeepinfo['r'], EpLen=maybeepinfo['l'])
+                    ep_len = maybeepinfo['l']
+                    sp_logger.store(EpRet=maybeepinfo['r'], EpLen=ep_len)
+                    rft_string = info.get('rft')
+                    if (rft_string and rft_string == 'timelimit') or ep_len == self.spec['env'][0]['max_t']:
+                        rft = 1
+            self.agent.update(state, action, reward, next_state, done, rft)
+            state = next_state
 
             if do_extra_logging and (latest_epoch != self.agent.performed_epochs()):
                 latest_epoch = self.agent.performed_epochs()
