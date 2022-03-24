@@ -396,7 +396,6 @@ def main():
                     arch_name = arch_dict['name']
                     dirs.append(get_output_dir(alg_name, arch_name, env_name))
                     alg_names.append(alg_name + ' ' + arch_name)
-            # TODO: The later graphs should not "inherit" information from previous ones.
             annonuce_message("Showing metrics for environment %s" % env_name)
             metrics = ['Performance']
             spinup.utils.plot.make_plots(dirs, legend=alg_names, xaxis='TotalEnvInteracts', values=metrics, count=False, smooth=1, select=None, exclude=None, estimator='mean')
