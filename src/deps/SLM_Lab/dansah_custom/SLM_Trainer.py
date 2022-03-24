@@ -8,6 +8,7 @@ from deps.SLM_Lab.slm_lab.experiment import analysis
 from deps.SLM_Lab.slm_lab.lib import logger, util
 
 from spinup.utils.logx import EpochLogger
+import numpy as np
 import pydash as ps
 import time
 import torch
@@ -19,6 +20,7 @@ class SLM_Trainer():
         self.env = env
         self.spec = spec
         self.index = self.spec['meta']['session']
+        self.set_seed(spec)
     
     def run_rl(self, logger_kwargs=dict()):
         '''Run the main RL loop until clock.max_frame'''
@@ -112,3 +114,14 @@ class SLM_Trainer():
             if len(body.eval_df) > 2:  # need more rows to calculate metrics
                 metrics = analysis.analyze_session(self.spec, body.eval_df, 'eval', plot=False)
                 body.log_metrics(metrics['scalar'], 'eval')
+
+    def set_seed(self, spec):
+        """
+        Sets the seed for random number generation, in a fashion 
+        similar to that in src/deps/SLM_Lab/slm_lab/lib/util.py.
+        """
+        random_seed = spec['meta']['random_seed']
+        torch.cuda.manual_seed_all(random_seed)
+        torch.manual_seed(random_seed)
+        np.random.seed(random_seed)
+        self.env.seed(random_seed)

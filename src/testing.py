@@ -41,7 +41,7 @@ import os
 #########################
 # High-level Parameters #
 #########################
-do_training = False
+do_training = True
 do_policy_test = False
 do_plots = True
 
@@ -356,7 +356,7 @@ def main():
         },
     ]
     envs_to_use = ["furuta_paper", "furuta_paper_norm"]
-    algorithms_to_use = ["a2c", "dqn", "a2c_s", "ddpg"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
+    algorithms_to_use = ["a2c", "dqn", "a2c_s", "ddpg", "ppo", "reinforce"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
     architecture_to_use = ["64_64_relu", "256_128_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
 
     envs = get_dicts_in_list_matching_names(envs_to_use, all_environments)

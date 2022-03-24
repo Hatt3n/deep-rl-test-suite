@@ -27,7 +27,6 @@ def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
     """
     mode: Should be 'train' or 'enjoy'.
     """
-    # TODO: Actually use the seed
     
     os.environ['lab_mode'] = mode
 
@@ -95,6 +94,7 @@ def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
             "trial": 0,
             "model_prepath": os.path.join('..', '..', '..', 'out', '%sslm' % ac_kwargs['rel_output_dir']),
             "info_prepath":  os.path.join('..', '..', '..', 'out', '%sslm' % ac_kwargs['rel_output_dir']),
+            "random_seed": seed,
         },
         #"search": {
         #    "agent": [{

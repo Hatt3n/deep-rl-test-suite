@@ -82,6 +82,8 @@ class EnvWrapper():
         '''Extract total_reward from info (set in wrapper) into self.total_reward for single and vec env'''
         self.total_reward = info['total_reward']
     
+    def seed(self, seed):
+        self.env.seed(seed)
 
     # Originally from openai.py in src\deps\SLM_Lab\slm_lab\env
     def reset(self):

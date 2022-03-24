@@ -70,6 +70,11 @@ class DummyVecEnv(VecEnv):
             return self.real_last_obs[0]
         else:
             return self.real_last_obs
+    
+    # Added by @dansah
+    def seed(self, seed):
+        for e in range(self.num_envs):
+            self.envs[e].seed(seed)
 
     def reset(self):
         self.real_last_obs = []

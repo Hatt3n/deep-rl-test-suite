@@ -15,7 +15,6 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
     """
     mode: Should be 'train' or 'enjoy'.
     """
-    # TODO: Actually use the seed
 
     if min_env_interactions == 0:
         min_env_interactions = epochs * steps_per_epoch
@@ -96,6 +95,7 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
             "trial": 0,
             "model_prepath": os.path.join('..', '..', '..', 'out', '%sslm' % ac_kwargs['rel_output_dir']),
             "info_prepath":  os.path.join('..', '..', '..', 'out', '%sslm' % ac_kwargs['rel_output_dir']),
+            "random_seed": seed,
         },
         #"search": {
         #    "agent": [{

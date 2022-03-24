@@ -254,6 +254,7 @@ def learn(
         num_epochs = int(np.ceil(total_timesteps / nsteps))
 
     set_global_seeds(seed)
+    env.seed(seed)
 
     # Get the nb of env
     nenvs = env.num_envs if hasattr(env, 'num_envs') else 1
