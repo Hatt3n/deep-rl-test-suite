@@ -267,7 +267,7 @@ def learn(
         model.load(load_path)
 
     # Instantiate the runner object
-    runner = Runner(env, model, nsteps=nsteps, gamma=gamma, logger=logger)
+    runner = Runner(env, model, max_ep_len, nsteps=nsteps, gamma=gamma, logger=logger)
     epinfobuf = deque(maxlen=100)
 
     # Calculate the batch_size

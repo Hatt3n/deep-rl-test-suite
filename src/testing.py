@@ -42,7 +42,7 @@ import os
 # High-level Parameters #
 #########################
 do_training = False
-do_policy_test = True
+do_policy_test = False
 do_plots = True
 
 #######################
@@ -101,11 +101,9 @@ def make_env_r():
     from custom_envs.furuta_swing_up_paper_r import FurutaPendulumEnvPaperRecurrent
     return FurutaPendulumEnvPaperRecurrent()
 
-
-
-
-
-
+######################
+# Training functions #
+######################
 def create_ac_kwargs(mlp_architecture=[64,64], activation_func=tf.nn.relu, arch_dict=dict(), output_dir="", slm_type=False):
     """
     Creates the ac_kwargs dictionary used by the algorithms (primarily the Spin Up ones).
@@ -143,6 +141,9 @@ def train_algorithm(alg_dict, arch_dict, env_dict, max_ep_len=MAX_EP_LEN, seed=0
         algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=alg_dict['training_frequency'], 
                      min_env_interactions=MIN_ENV_INTERACTIONS, logger_kwargs=logger_kwargs, seed=seed)
 
+########################
+# Evaluation functions #
+########################
 def evaluate_algorithm(alg_dict, arch_dict, env_dict):
     """
     Evaluate a trained algorithm by applying it and rendering the result.
@@ -198,6 +199,9 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict):
     else:
         raise NotImplementedError("No handler for algorithm type %s" % (alg_dict['type']))
 
+#########################
+# Misc helper functions #
+#########################
 def annonuce_message(message):
     """
     Prints a message in a fancy way.
@@ -237,6 +241,22 @@ def get_activation_by_name(activation_name, use_torch=True):
     else:
         raise Exception("Invalid activation function name %s" % (activation_name))
 
+def get_dicts_in_list_matching_names(name_list, dict_list):
+    """
+    Takes a list of names (strings) and a list of dictionaries
+    all containing the key 'name' (string), and returns a list
+    of all dictionaries in this latter list that have their
+    'name' in the former list.
+    """
+    res = []
+    for dict in dict_list:
+        if dict['name'] in name_list:
+            res.append(dict)
+    return res
+
+#################
+# Main function #
+#################
 def main():
     """
     Runns all of the experiments.
@@ -268,7 +288,7 @@ def main():
         {
             "name": "a2c_s",            # The name of the algorithm. Must be unique, but could be any String without whitespace.
             "alg_fn": a2c_s,            # Function that trains an agent using the algorithm. Should comply with the Spin Up API.
-            "continuous": True,         # Function that returns a new OpenAI Gym environment instance.
+            "continuous": True,         # Specifies whether the algorithm supports continuous action spaces.
             "type": "slm",              # Species the implementation type/origin of the algorithm.
             "training_frequency": 4008, # How often updates are performed. NOTE: Could be in terms of experiences or episodes; this depends on the algorithm.
         },
@@ -336,22 +356,12 @@ def main():
         },
     ]
     envs_to_use = ["furuta_paper", "furuta_paper_norm"]
-    envs = []
-    for env_dict in all_environments:
-        if env_dict['name'] in envs_to_use:
-            envs.append(env_dict)
-
-    algorithms_to_use = ["dqn", "a2c_s", "ddpg"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
-    algorithms = []
-    for alg_dict in all_algorithms:
-        if alg_dict['name'] in algorithms_to_use:
-            algorithms.append(alg_dict)
-
+    algorithms_to_use = ["a2c", "dqn", "a2c_s", "ddpg"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
     architecture_to_use = ["64_64_relu", "256_128_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
-    architectures = []
-    for arch_dict in all_architectures:
-        if arch_dict['name'] in architecture_to_use:
-            architectures.append(arch_dict)
+
+    envs = get_dicts_in_list_matching_names(envs_to_use, all_environments)
+    algorithms = get_dicts_in_list_matching_names(algorithms_to_use, all_algorithms)
+    architectures = get_dicts_in_list_matching_names(architecture_to_use, all_architectures)
 
     if do_training:
         for env_dict in envs:
@@ -376,9 +386,9 @@ def main():
                         evaluate_algorithm(alg_dict, arch_dict, env_dict)
 
     if do_plots:
-        dirs = []
-        alg_names = []
         for env_dict in envs:
+            dirs = []
+            alg_names = []
             env_name = env_dict['name']
             for alg_dict in algorithms:
                 alg_name = alg_dict['name']

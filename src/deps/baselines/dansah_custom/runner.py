@@ -12,12 +12,13 @@ class Runner(AbstractEnvRunner):
     run():
     - Make a mini batch of experiences
     """
-    def __init__(self, env, model, nsteps=5, gamma=0.99, logger=None):
+    def __init__(self, env, model, max_ep_len, nsteps=5, gamma=0.99, logger=None):
         super().__init__(env=env, model=model, nsteps=nsteps)
         self.gamma = gamma
         self.batch_action_shape = [x if x is not None else -1 for x in model.train_model.action.shape.as_list()]
         self.ob_dtype = model.train_model.X.dtype.as_numpy_dtype
         self.logger = logger
+        self.max_ep_len = max_ep_len
 
     # Modified by @dansah
     def run(self):
@@ -44,13 +45,13 @@ class Runner(AbstractEnvRunner):
                 maybeepinfo = info.get('episode')
                 if maybeepinfo:
                     # The episode is over.
-                    #print("-->Episode over, total steps: %s <--" % (n+1))
+                    eplen = maybeepinfo['l']
                     epinfos.append(maybeepinfo)
                     if self.logger is not None:
-                        self.logger.store(EpRet=maybeepinfo['r'], EpLen=maybeepinfo['l'])
+                        self.logger.store(EpRet=maybeepinfo['r'], EpLen=eplen)
                     # Check the reason for termination, if available, and then bootstrap if timeout.
                     rft = info.get('rft')
-                    if rft and rft == 'timelimit':
+                    if (rft and rft == 'timelimit') or eplen == self.max_ep_len:
                         real_last_obs = self.env.get_real_last_obs() # Baselines returns the obs from env.reset() instead of the real final obs when done=True.
                         last_value = self.model.value([real_last_obs], S=states, M=[False]).tolist()[0] # Manually setting done=False, but it does not seem like the flag affects the result.
                         rewards[0] += self.gamma * last_value # Manually bootstrap when terminating due to timelimit, as in Time Limits in Reinforcement Learning by F. Pardo et al. (2018)
