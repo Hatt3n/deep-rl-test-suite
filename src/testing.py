@@ -44,7 +44,7 @@ import os
 #    but not by e.g. SLM Lab algorithms, in the sense that they don't train for
 #    >= min_env_interactions steps, they just experience that many steps.
 # 2. On macOS, when plotting, the closed environments' windows will open up again.
-# 3. Reinforce only runs for 2 epochs on Cartpole when set to 50 => Why?
+# 3. Reinforce only runs for 2 epochs on Cartpole when set to 50 => Why? DDPG has a similar problem.
 
 #########################
 # High-level Parameters #
