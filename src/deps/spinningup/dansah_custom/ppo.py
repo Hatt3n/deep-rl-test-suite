@@ -298,6 +298,9 @@ def ppo(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                      DeltaLossV=(loss_v.item() - v_l_old))
 
     # Prepare for interaction with environment
+    latest_epoch = 0
+    real_epoch = 0
+    at_least_one_done = False
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
 
@@ -306,6 +309,7 @@ def ppo(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
     # Main loop: collect experience in env and update/log each epoch
     for epoch in range(epochs):
+        real_epoch = epoch
         for t in range(local_steps_per_epoch):
             a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32))
 
@@ -325,8 +329,8 @@ def ppo(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             epoch_ended = t==local_steps_per_epoch-1
 
             if terminal or epoch_ended:
-                if epoch_ended and not(terminal):
-                    print('Warning: trajectory cut off by epoch at %d steps.'%ep_len, flush=True)
+                #if epoch_ended and not(terminal):
+                #    print('Warning: trajectory cut off by epoch at %d steps.'%ep_len, flush=True)
                 # if trajectory didn't reach terminal state, bootstrap value target
                 if timeout or epoch_ended:
                     _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32))
@@ -335,33 +339,41 @@ def ppo(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                 buf.finish_path(v)
                 if terminal:
                     # only save EpRet / EpLen if trajectory finished
+                    at_least_one_done = True
                     logger.store(EpRet=ep_ret, EpLen=ep_len)
-                o, ep_ret, ep_len = env.reset(), 0, 0
+                    o, ep_ret, ep_len = env.reset(), 0, 0 # Only reset the environment on a terminal signal.
 
 
-        # Save model
-        if (epoch % save_freq == 0) or (epoch == epochs-1):
-            logger.save_state({'env': env}, None)
+            if epoch_ended: # End of epoch
 
-        # Perform PPO update!
-        update()
+                # Save model
+                if (epoch % save_freq == 0) or (epoch == epochs-1):
+                    logger.save_state({'env': env}, None)
 
-        # Log info about epoch
-        logger.log_tabular('Epoch', epoch)
-        logger.log_tabular('EpRet', with_min_and_max=True)
-        logger.log_tabular('EpLen', average_only=True)
-        logger.log_tabular('VVals', with_min_and_max=True)
-        logger.log_tabular('TotalEnvInteracts', (epoch+1)*steps_per_epoch)
-        logger.log_tabular('LossPi', average_only=True)
-        logger.log_tabular('LossV', average_only=True)
-        logger.log_tabular('DeltaLossPi', average_only=True)
-        logger.log_tabular('DeltaLossV', average_only=True)
-        logger.log_tabular('Entropy', average_only=True)
-        logger.log_tabular('KL', average_only=True)
-        logger.log_tabular('ClipFrac', average_only=True)
-        logger.log_tabular('StopIter', average_only=True)
-        logger.log_tabular('Time', time.time()-start_time)
-        logger.dump_tabular()
+                # Perform PPO update!
+                update()
+
+                real_epoch += 1
+
+            # Log info about epoch
+            if latest_epoch != real_epoch and at_least_one_done: # TODO: Adjust so that more prints are received (so to speak)
+                latest_epoch = real_epoch
+                at_least_one_done = False
+                logger.log_tabular('Epoch', real_epoch)
+                logger.log_tabular('EpRet', with_min_and_max=True)
+                logger.log_tabular('EpLen', average_only=True)
+                logger.log_tabular('VVals', with_min_and_max=True)
+                logger.log_tabular('TotalEnvInteracts', real_epoch*steps_per_epoch)
+                logger.log_tabular('LossPi', average_only=True)
+                logger.log_tabular('LossV', average_only=True)
+                logger.log_tabular('DeltaLossPi', average_only=True)
+                logger.log_tabular('DeltaLossV', average_only=True)
+                logger.log_tabular('Entropy', average_only=True)
+                logger.log_tabular('KL', average_only=True)
+                logger.log_tabular('ClipFrac', average_only=True)
+                logger.log_tabular('StopIter', average_only=True)
+                logger.log_tabular('Time', time.time()-start_time)
+                logger.dump_tabular()
 
 if __name__ == '__main__':
     import argparse

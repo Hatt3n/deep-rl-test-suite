@@ -4,7 +4,7 @@ import torch
 from torch.optim import Adam
 import gym
 import time
-import spinup.algos.pytorch.ddpg.core as core
+import deps.spinningup.dansah_custom.ddpg_core as core
 from spinup.utils.logx import EpochLogger
 
 
@@ -119,6 +119,8 @@ def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             between gradient descent updates. Note: Regardless of how long 
             you wait between updates, the ratio of env steps to gradient steps 
             is locked to 1.
+            NOTE: This parameter is ignored, use steps_per_epoch to control
+            the training frequency.
 
         act_noise (float): Stddev for Gaussian exploration noise added to 
             policy at training time. (At test time, no noise is added.)
@@ -143,15 +145,20 @@ def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
     env, test_env = env_fn(), env_fn()
     obs_dim = env.observation_space.shape
-    act_dim = env.action_space.shape[0]
+    if env.is_discrete:
+        act_dim = 1
+        act_limit_lower = 0
+        act_limit_upper = env.action_space.n - 1
+    else:
+        act_dim = env.action_space.shape[0]
+        # Action limit for clamping: critically, assumes all dimensions share the same bound!
+        act_limit_lower = env.action_space.low[0]
+        act_limit_upper = env.action_space.high[0]
 
     env.seed(seed) # Added by dansah
 
-    # Action limit for clamping: critically, assumes all dimensions share the same bound!
-    act_limit = env.action_space.high[0]
-
     # Create actor-critic module and target networks
-    ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
+    ac = actor_critic(env.observation_space, env.action_space, env.is_discrete, **ac_kwargs)
     ac_targ = deepcopy(ac)
 
     # Freeze target networks with respect to optimizers (only update via polyak averaging)
@@ -233,7 +240,9 @@ def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     def get_action(o, noise_scale):
         a = ac.act(torch.as_tensor(o, dtype=torch.float32))
         a += noise_scale * np.random.randn(act_dim)
-        return np.clip(a, -act_limit, act_limit)
+        if env.is_discrete:
+            a = int(a)
+        return np.clip(a, act_limit_lower, act_limit_upper)
 
     def test_agent():
         for j in range(num_test_episodes):
@@ -249,6 +258,9 @@ def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         epochs = int(np.ceil(min_env_interactions / steps_per_epoch))
 
     # Prepare for interaction with environment
+    at_least_one_done = False
+    latest_epoch = 0
+    epoch = 0
     total_steps = steps_per_epoch * epochs
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
@@ -283,18 +295,22 @@ def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
         # End of trajectory handling
         if d or (ep_len == max_ep_len):
+            at_least_one_done = True
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             o, ep_ret, ep_len = env.reset(), 0, 0
 
         # Update handling
-        if t >= update_after and t % update_every == 0:
-            for _ in range(update_every):
+        if t >= update_after and t % steps_per_epoch == 0:
+            epoch += 1 # NOTE: Technically, the amount of updates is steps_per_epoch times larger than this value.
+            for _ in range(steps_per_epoch):
                 batch = replay_buffer.sample_batch(batch_size)
                 update(data=batch)
 
         # End of epoch handling
-        if (t+1) % steps_per_epoch == 0:
-            epoch = (t+1) // steps_per_epoch
+        if latest_epoch != epoch and at_least_one_done:
+
+            latest_epoch = epoch
+            at_least_one_done = False
 
             # Save model
             if (epoch % save_freq == 0) or (epoch == epochs):
