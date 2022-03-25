@@ -308,7 +308,8 @@ def learn(
         #logger.dump_tabular()
 
         # Log info about epoch
-        if (epoch+1)*nsteps > max_ep_len: # Ensure that at least 1 episode has finished.
+        if runner.at_least_one_done: # Ensure that at least 1 episode has finished since last log.
+            runner.at_least_one_done = False
             ev = explained_variance(values, rewards)
             bs_logger.record_tabular("nupdates", (epoch+1))
             bs_logger.record_tabular("total_timesteps", (epoch+1)*nbatch)

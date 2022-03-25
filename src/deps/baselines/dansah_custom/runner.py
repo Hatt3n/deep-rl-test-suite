@@ -19,6 +19,7 @@ class Runner(AbstractEnvRunner):
         self.ob_dtype = model.train_model.X.dtype.as_numpy_dtype
         self.logger = logger
         self.max_ep_len = max_ep_len
+        self.at_least_one_done = False
 
     # Modified by @dansah
     def run(self):
@@ -45,6 +46,7 @@ class Runner(AbstractEnvRunner):
                 maybeepinfo = info.get('episode')
                 if maybeepinfo:
                     # The episode is over.
+                    self.at_least_one_done = True
                     eplen = maybeepinfo['l']
                     epinfos.append(maybeepinfo)
                     if self.logger is not None:

@@ -30,6 +30,9 @@ class DummyVecEnv(VecEnv):
         self.actions = None
         self.spec = self.envs[0].spec
 
+        self.total_reward = np.float16(0)
+        self.ep_len_counter = 0
+
     def step_async(self, actions):
         listify = True
         try:
@@ -53,7 +56,17 @@ class DummyVecEnv(VecEnv):
             #    action = int(action)
 
             obs, self.buf_rews[e], self.buf_dones[e], self.buf_infos[e] = self.envs[e].step(action)
+            if self.num_envs == 1:
+                self.ep_len_counter += 1
+                self.total_reward += self.buf_rews[e]
             if self.buf_dones[e]:
+                if not self.buf_infos[e].get('episode') and self.num_envs == 1:
+                    self.buf_infos[e]['episode'] = {
+                        'r': self.total_reward,
+                        'l': self.ep_len_counter,
+                    }
+                    self.total_reward = np.float16(0)
+                    self.ep_len_counter = 0
                 self.real_last_obs[e] = obs
                 obs = self.envs[e].reset() # NOTE: When terminated, the step-functions does NOT return the state in which the termination occurred! The real one is saved on the line above.
             self._save_obs(e, obs)
@@ -77,6 +90,9 @@ class DummyVecEnv(VecEnv):
             self.envs[e].seed(seed)
 
     def reset(self):
+        if self.num_envs == 1:
+            self.total_reward = np.float16(0)
+            self.ep_len_counter = 0
         self.real_last_obs = []
         for e in range(self.num_envs):
             obs = self.envs[e].reset()
