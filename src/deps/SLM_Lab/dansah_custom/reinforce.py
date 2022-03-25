@@ -204,7 +204,8 @@ class Reinforce(Algorithm):
     def act(self, state):
         body = self.body
         action = self.action_policy(state, self, body)
-        action = torch.clamp(action, min=self.body.action_space.low[0], max=self.body.action_space.high[0]) # The action must respect the min and max bounds.
+        if not body.env.is_discrete:
+            action = torch.clamp(action, min=self.body.action_space.low[0], max=self.body.action_space.high[0]) # The action must respect the min and max bounds.
         return action.cpu().squeeze().numpy()  # squeeze to handle scalar
 
     @lab_api

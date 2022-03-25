@@ -32,6 +32,7 @@ class SLM_Trainer():
             latest_epoch = self.agent.performed_epochs()
             env_interactions = 0
 
+        at_least_one_done = False
         # Standard
         logger.info(f'Running RL loop for trial {self.spec["meta"]["trial"]} session {self.index}')
         clock = self.env.clock
@@ -54,6 +55,7 @@ class SLM_Trainer():
             rft = 0
             if done and do_extra_logging:
                 # Update counters (Based on runner.py in src\baselines\baselines\a2c)
+                at_least_one_done = True
                 maybeepinfo = info.get('episode')
                 if maybeepinfo:
                     env_interactions += maybeepinfo['l']
@@ -65,8 +67,9 @@ class SLM_Trainer():
             self.agent.update(state, action, reward, next_state, done, rft)
             state = next_state
 
-            if do_extra_logging and (latest_epoch != self.agent.performed_epochs()):
+            if do_extra_logging and (latest_epoch != self.agent.performed_epochs()) and at_least_one_done:
                 latest_epoch = self.agent.performed_epochs()
+                at_least_one_done = False # We want one Done between each print (i.e. at least one episode)
                 sp_logger.log_tabular('Epoch', latest_epoch)
                 sp_logger.log_tabular('EpRet', with_min_and_max=True)
                 sp_logger.log_tabular('EpLen', average_only=True)

@@ -16,7 +16,9 @@ logger = logger.get_logger(__name__)
 
 
 def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, 
-        epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train'):
+        epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train', training_start_step=-1):
+    if training_start_step != -1:
+        print("It worked, got %s and %s" % (training_start_step, steps_per_epoch))
 
     if min_env_interactions == 0:
         min_env_interactions = epochs * steps_per_epoch
@@ -40,7 +42,7 @@ def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
                 "training_batch_iter": 2,
                 "training_iter": 2,
                 "training_frequency": steps_per_epoch, # OnPolicyBatchReplay trains every X experiences.
-                "training_start_step": steps_per_epoch, # TODO: Consider adjusting
+                "training_start_step": steps_per_epoch if training_start_step == -1 else training_start_step,
             },
             "memory": {
                 "name": "Replay",

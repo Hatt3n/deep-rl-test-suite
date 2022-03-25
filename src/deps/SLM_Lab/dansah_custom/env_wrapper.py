@@ -54,6 +54,8 @@ class EnvWrapper():
         ])
 
         self.clock = Clock(max_frame=self.max_frame)
+        self.manual_total_reward = False
+        self.ep_len_counter = 0
     
     # Copied from base.py in src\deps\SLM_Lab\slm_lab\env
     def _get_observable_dim(self, observation_space):
@@ -78,9 +80,18 @@ class EnvWrapper():
         return action_dim
 
     # Originally from base.py in src\deps\SLM_Lab\slm_lab\env
-    def _update_total_reward(self, info):
+    def _update_total_reward(self, reward, info):
         '''Extract total_reward from info (set in wrapper) into self.total_reward for single and vec env'''
-        self.total_reward = info['total_reward']
+        if not self.manual_total_reward:
+            tmp_total_reward = info.get('total_reward')
+            if tmp_total_reward:
+                self.total_reward = tmp_total_reward
+            else:
+                print("NOTE: Could not get total_reward from info dictionary, switching to manual.")
+                self.total_reward = np.float16(0)
+                self.manual_total_reward = True
+        if self.manual_total_reward:
+            self.total_reward += reward
     
     def seed(self, seed):
         self.env.seed(seed)
@@ -91,19 +102,31 @@ class EnvWrapper():
         state = self.env.reset()
         if self.to_render:
             self.env.render()
+        if self.manual_total_reward:
+            self.total_reward = np.float16(0)
+        self.ep_len_counter = 0
         return state
 
     # Originally from openai.py in src\deps\SLM_Lab\slm_lab\env
     def step(self, action):
+        self.ep_len_counter += 1
         if not self.is_discrete and self.action_dim == 1:  # guard for continuous with action_dim 1, make array
             action = np.expand_dims(action, axis=-1)
         state, reward, done, info = self.env.step(action)
-        self._update_total_reward(info)
+        self._update_total_reward(reward, info)
         if self.to_render:
             self.env.render()
         if not self.is_venv and self.clock.t > self.max_t:
             done = True
         self.done = done
+        if done:
+            epinfo = info.get('episode')
+            if not epinfo: # The epret and eplen must manually be provided.
+                print("NOTE: Manually providing epret and eplen")
+                info['episode'] = {
+                    'r': self.total_reward,
+                    'l': self.ep_len_counter,
+                }
         return state, reward, done, info
 
     # Originally from openai.py in src\deps\SLM_Lab\slm_lab\env

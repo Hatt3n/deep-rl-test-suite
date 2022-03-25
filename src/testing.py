@@ -1,9 +1,15 @@
 """
-File for testing the Furuta pendulum swing-up task.
+File for testing the algorithms on various environments, such as
+the Furuta pendulum swing-up ones.
 
-Last edit: 2022-03-24
+NOTE: The word epoch is commonly used to refer to the number of
+parameter updates performed throughout this code base.
+
+Last edit: 2022-03-25
 By: dansah
 """
+
+from configs import ALGO_ENV_CONFIGS
 
 import spinup.utils.test_policy
 import spinup.utils.plot
@@ -31,12 +37,14 @@ import os
 # 2. Early exit to avoid solutions that are obviously bad <- Done, but could
 #    be adjusted; when should we exit and for what reasons?
 # 3. Compare different reward-functions.
+# 4. Compare the PPO versions; why does spin up reset the environment before training by default?
 
 # Things to fix/adjust:
 # 1. min_env_interactions is treated as min by baselines-algorithms and Spin-Up (seemingly),
 #    but not by e.g. SLM Lab algorithms, in the sense that they don't train for
 #    >= min_env_interactions steps, they just experience that many steps.
 # 2. On macOS, when plotting, the closed environments' windows will open up again.
+# 3. Reinforce only runs for 2 epochs on Cartpole when set to 50 => Why?
 
 #########################
 # High-level Parameters #
@@ -48,8 +56,8 @@ do_plots = True
 #######################
 # Training parameters #
 #######################
-EPOCHS=2                                        # The number of parameter updates to perform before stopping trainin. NOTE: This value is not necessarily respected by all algorithms
-MIN_ENV_INTERACTIONS = EPOCHS * 4008+1          # The minimum number of interactions the agents should perform before stopping training.
+EPOCHS=50                                       # The number of parameter updates to perform before stopping trainin. NOTE: This value is not necessarily respected by all algorithms
+MIN_ENV_INTERACTIONS = EPOCHS * 32+1            # The minimum number of interactions the agents should perform before stopping training.
 base_dir = os.path.join('.', 'out%s' % os.sep)  # The base directory for storing the output of the algorithms.
 
 ####################
@@ -60,6 +68,29 @@ MAX_EP_LEN = 501
 #########################
 # Environment functions #
 #########################
+def make_cartpole_env():
+    """
+    Creates an instance of the OpenAI Gym cartpole
+    environment, which is a discrete stabilization
+    problem.
+    """
+    from gym.envs.classic_control import CartPoleEnv
+    env = CartPoleEnv()
+    env.is_discrete = True
+    return env
+
+def make_walker_2d_env():
+    """
+    Creates an instance of the MuJuCo Walker 2D
+    environment, in which continuous values are
+    given to control several motors of a robot
+    so as to make it walk.
+    """
+    from gym.envs.mujoco.walker2d import Walker2dEnv
+    env = Walker2dEnv()
+    env.is_discrete = False
+    return env
+
 def make_env():
     """
     Creates a new Furuta Pendulum environment (swing-up).
@@ -101,6 +132,16 @@ def make_env_r():
     from custom_envs.furuta_swing_up_paper_r import FurutaPendulumEnvPaperRecurrent
     return FurutaPendulumEnvPaperRecurrent()
 
+def make_env_r_disc():
+    """
+    Creates a new Furuta Pendulum environment (swing-up),
+    where one of the values in the observed state is the previous input to the environment
+    (the previous input being the one gotten _after_ converting the discrete output of the
+    agent to a continuous value).
+    """
+    from custom_envs.env_util import DiscretizingEnvironmentWrapper
+    return DiscretizingEnvironmentWrapper(make_env_r)
+
 ######################
 # Training functions #
 ######################
@@ -115,7 +156,7 @@ def create_ac_kwargs(mlp_architecture=[64,64], activation_func=tf.nn.relu, arch_
         ac_kwargs['rel_output_dir'] = output_dir.replace(base_dir, "")
     return ac_kwargs
 
-def train_algorithm(alg_dict, arch_dict, env_dict, max_ep_len=MAX_EP_LEN, seed=0): # NOTE: max_ep_len is actually 501.
+def train_algorithm(alg_dict, arch_dict, env_dict, max_ep_len=MAX_EP_LEN, seed=0):
     """
     Trains the given algorithm. The output is saved in the output directory
     returned by get_output_dir.
@@ -130,16 +171,19 @@ def train_algorithm(alg_dict, arch_dict, env_dict, max_ep_len=MAX_EP_LEN, seed=0
 
     algorithm_fn = alg_dict['alg_fn']
     env_fn = env_dict['env_fn'] if alg_dict['continuous'] else env_dict['env_fn_disc']
+    alg_specific_params = dict()
+    if alg_dict.get('specific'):
+        alg_specific_params = alg_dict['specific']
 
-    if alg_dict['type'] == 'baselines':
+    if alg_dict['type'] == 'baselines': # Only type using Tensorflow
         with tf.Graph().as_default():
             algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=alg_dict['training_frequency'], 
-                         min_env_interactions=MIN_ENV_INTERACTIONS, logger_kwargs=logger_kwargs, seed=seed)
+                         min_env_interactions=MIN_ENV_INTERACTIONS, logger_kwargs=logger_kwargs, seed=seed, **alg_specific_params)
         #tf.get_default_session().close()
         #tf.reset_default_graph()
     else:
         algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=alg_dict['training_frequency'], 
-                     min_env_interactions=MIN_ENV_INTERACTIONS, logger_kwargs=logger_kwargs, seed=seed)
+                     min_env_interactions=MIN_ENV_INTERACTIONS, logger_kwargs=logger_kwargs, seed=seed, **alg_specific_params)
 
 ########################
 # Evaluation functions #
@@ -276,12 +320,22 @@ def main():
         {
             "name": "furuta_paper_r",
             "env_fn": make_env_r,
-            "env_fn_disc": None,
+            "env_fn_disc": make_env_r_disc,
         },
         {
             "name": "furuta_paper_norm",
             "env_fn": make_env_norm,
             "env_fn_disc": make_env_norm_disc,
+        },
+        {
+            "name": "cartpole",
+            "env_fn": make_cartpole_env,
+            "env_fn_disc": make_cartpole_env,
+        },
+        {
+            "name": "walker_2d",
+            "env_fn": make_walker_2d_env,
+            "env_fn_disc": None,
         },
     ]
     all_algorithms = [
@@ -290,42 +344,36 @@ def main():
             "alg_fn": a2c_s,            # Function that trains an agent using the algorithm. Should comply with the Spin Up API.
             "continuous": True,         # Specifies whether the algorithm supports continuous action spaces.
             "type": "slm",              # Species the implementation type/origin of the algorithm.
-            "training_frequency": 4008, # How often updates are performed. NOTE: Could be in terms of experiences or episodes; this depends on the algorithm.
         },
         {
             "name": "a2c",
             "alg_fn": a2c,
             "continuous": True,
             "type": "baselines",
-            "training_frequency": 4008,
         },
         {
             "name": "ddpg",
             "alg_fn": ddpg,
             "continuous": True,
             "type": "spinup",
-            "training_frequency": 4008,
         },
         {
             "name": "dqn",
             "alg_fn": dqn,
             "continuous": False,
             "type": "slm",
-            "training_frequency": 4008,
         },
         {
             "name": "ppo",
             "alg_fn": ppo,
             "continuous": True,
             "type": "spinup",
-            "training_frequency": 4008,
         },
         {
             "name": "reinforce",
             "alg_fn": reinforce,
             "continuous": True,
             "type": "slm",
-            "training_frequency": 1,
         },
     ]
     all_architectures = [
@@ -355,9 +403,9 @@ def main():
             "activation": "relu"
         },
     ]
-    envs_to_use = ["furuta_paper", "furuta_paper_norm"]
-    algorithms_to_use = ["a2c", "dqn", "a2c_s", "ddpg", "ppo", "reinforce"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
-    architecture_to_use = ["64_64_relu", "256_128_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
+    envs_to_use = ["cartpole"] #["furuta_paper", "furuta_paper_norm"]
+    algorithms_to_use = ["a2c", "a2c_s", "ddpg", "ppo", "reinforce"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
+    architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
 
     envs = get_dicts_in_list_matching_names(envs_to_use, all_environments)
     algorithms = get_dicts_in_list_matching_names(algorithms_to_use, all_algorithms)
@@ -365,9 +413,11 @@ def main():
 
     if do_training:
         for env_dict in envs:
+            env_name = env_dict['name']
             for alg_dict in algorithms:
-                name = alg_dict['name']
-                annonuce_message("Now training with %s in environment %s" % (name, env_dict['name']))
+                alg_name = alg_dict['name']
+                alg_dict = {**alg_dict, **ALGO_ENV_CONFIGS[env_name][alg_name]} # Merge-in training parameters.
+                annonuce_message("Now training with %s in environment %s" % (alg_name, env_name))
                 for arch_dict in architectures:
                     heads_up_message("Using arch %s" % (arch_dict['name']))
                     train_algorithm(alg_dict, arch_dict, env_dict)
@@ -375,8 +425,8 @@ def main():
     if do_policy_test:
         for env_dict in envs:
             for alg_dict in algorithms:
-                name = alg_dict['name']
-                annonuce_message("Now testing %s in environment %s" % (name, env_dict['name']))
+                alg_name = alg_dict['name']
+                annonuce_message("Now testing %s in environment %s" % (alg_name, env_dict['name']))
                 for arch_dict in architectures:
                     heads_up_message("Using arch %s" % (arch_dict['name']))
                     if alg_dict['type'] == 'baselines':
