@@ -2,12 +2,12 @@
 
 # Requirements
 The following software must be installed before the installation can be performed:
-- Python 3.7
+- Python 3.7 or 3.9.10 
 - ipm-python https://github.com/br4sco/ipm-python
-- pyglet (version 1.5.11)
-- All software listed in [src/deps/SLM_Lab/environment.yml](src/deps/SLM_Lab/environment.yml) (all versions do not need to match) except Roboschool (there could be more unused modules)
+- pyglet version 1.5.11 or 1.5.14
+- All software listed in [src/deps/SLM_Lab/environment.yml](src/deps/SLM_Lab/environment.yml) except Roboschool
 - Windows 11 or macOS 12 (might work on other OS:es)
-- **NOTE:** This list is not complete.
+- **NOTE:** This list is not complete. Also, some of the modules specified above may not necessarily be used in the current implementation.
 
 # Installation
 1. Open a terminal window in the [src]() folder.
