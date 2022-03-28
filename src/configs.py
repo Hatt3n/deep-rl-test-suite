@@ -14,6 +14,9 @@ algo_env_configs = {
         },
         "ddpg": {
             "training_frequency": 32,
+            "specific": {
+                "start_steps": 2000,
+            },
         },
         "dqn": {
             "training_frequency": 4, # Value from SLM_Lab spec-file "dqn_cartpole.json"
