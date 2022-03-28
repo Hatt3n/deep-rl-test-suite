@@ -56,6 +56,7 @@ class EnvWrapper():
         self.clock = Clock(max_frame=self.max_frame)
         self.manual_total_reward = False
         self.ep_len_counter = 0
+        self._showed_note = False
     
     # Copied from base.py in src\deps\SLM_Lab\slm_lab\env
     def _get_observable_dim(self, observation_space):
@@ -122,7 +123,9 @@ class EnvWrapper():
         if done:
             epinfo = info.get('episode')
             if not epinfo: # The epret and eplen must manually be provided.
-                print("NOTE: Manually providing epret and eplen")
+                if not self._showed_note:
+                    print("NOTE: Manually providing epret and eplen")
+                    self._showed_note = True
                 info['episode'] = {
                     'r': self.total_reward,
                     'l': self.ep_len_counter,
