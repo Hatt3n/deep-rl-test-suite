@@ -84,8 +84,8 @@ def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
         },
         "meta": {
             "distributed": False,
-            "eval_frequency": steps_per_epoch*max_ep_len if util.in_train_lab_mode() else max_ep_len, # Since it trains every X episodes.
-            "log_frequency": steps_per_epoch*max_ep_len if util.in_train_lab_mode() else max_ep_len,
+            "eval_frequency": logger_kwargs['log_frequency']*steps_per_epoch*max_ep_len if util.in_train_lab_mode() else max_ep_len, # Since it trains every X episodes.
+            "log_frequency": logger_kwargs['log_frequency']*steps_per_epoch*max_ep_len if util.in_train_lab_mode() else max_ep_len,
             "max_session": 4,
             "max_trial": 1,
             "resume": False,

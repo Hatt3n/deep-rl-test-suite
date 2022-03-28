@@ -4,7 +4,7 @@ tf.disable_v2_behavior()
 import gym
 import time
 import spinup.algos.tf1.ppo.core as core
-from spinup.utils.logx import EpochLogger
+from deps.spinningup.dansah_custom.logx import EpochLogger
 from spinup.utils.mpi_tf import MpiAdamOptimizer, sync_all_params
 from spinup.utils.mpi_tools import mpi_fork, mpi_avg, proc_id, mpi_statistics_scalar, num_procs
 

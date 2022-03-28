@@ -7,6 +7,7 @@ Added by dansah.
 from deps.SLM_Lab.dansah_custom.agent import Agent, Body
 from deps.SLM_Lab.dansah_custom.env_wrapper import EnvWrapper
 from deps.SLM_Lab.dansah_custom.SLM_Trainer import SLM_Trainer
+from deps.SLM_Lab.slm_lab.lib import util
 
 import os
 
@@ -85,8 +86,8 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
         },
         "meta": {
             "distributed": False,
-            "eval_frequency": steps_per_epoch,
-            "log_frequency": steps_per_epoch,
+            "eval_frequency": logger_kwargs['log_frequency']*steps_per_epoch if util.in_train_lab_mode() else max_ep_len,
+            "log_frequency": logger_kwargs['log_frequency']*steps_per_epoch if util.in_train_lab_mode() else max_ep_len,
             "max_session": 4,
             "max_trial": 1,
             "resume": False,

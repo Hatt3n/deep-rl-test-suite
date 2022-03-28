@@ -5,7 +5,7 @@ import gym
 import time
 from spinup.algos.tf1.ddpg import core
 from spinup.algos.tf1.ddpg.core import get_vars
-from spinup.utils.logx import EpochLogger
+from deps.spinningup.dansah_custom.logx import EpochLogger
 
 
 class ReplayBuffer:

@@ -6,8 +6,8 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 import os.path as osp
 
-from baselines import logger as bs_logger
-from spinup.utils.logx import EpochLogger
+from deps.baselines.dansah_custom import logger as bs_logger
+from deps.spinningup.dansah_custom.logx import EpochLogger
 
 from baselines.common import set_global_seeds, explained_variance
 from baselines.common import tf_util
@@ -243,7 +243,7 @@ def learn(
     if load_path is None:
         logger = EpochLogger(**logger_kwargs)
         logger.save_config(locals())
-        bs_logger.configure(logger_kwargs['output_dir'])
+        bs_logger.configure(dir=logger_kwargs['output_dir'], log_frequency=logger_kwargs['log_frequency'])
     else:
         logger = None
 

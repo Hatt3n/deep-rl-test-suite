@@ -23,6 +23,8 @@ def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
     if min_env_interactions == 0:
         min_env_interactions = epochs * steps_per_epoch
 
+    os.environ['lab_mode'] = mode
+
     spec = {
         "name": "dqn_boltzmann_furuta",
         "agent": [{
@@ -83,8 +85,8 @@ def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
         },
         "meta": {
             "distributed": False,
-            "eval_frequency": steps_per_epoch,
-            "log_frequency": steps_per_epoch,
+            "eval_frequency": logger_kwargs['log_frequency']*steps_per_epoch*4 if util.in_train_lab_mode() else max_ep_len, # NOTE: Times 4.
+            "log_frequency": logger_kwargs['log_frequency']*steps_per_epoch*4 if util.in_train_lab_mode() else max_ep_len,
             "max_session": 4,
             "max_trial": 1,
             "resume": False,
@@ -108,8 +110,6 @@ def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
         #    }]
         #}
     }
-
-    os.environ['lab_mode'] = mode
 
     env = EnvWrapper(env_fn, spec)
     agent = Agent(spec, Body(env, spec))

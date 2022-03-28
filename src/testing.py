@@ -30,27 +30,26 @@ import os
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 # Things to try:
-# 1. Normalize reward and observable states <- Done, but needs adjustment. The
-#    agents should use the TD update rule "V(s)=r" when terminated due to non-
-#    timeout reasons and "V(s)=r+gamma*V(s')" otherwise, as discussed in
-#    Time Limits in Reinforcement Learning by F. Pardo et al. (2018)
-# 2. Early exit to avoid solutions that are obviously bad <- Done, but could
-#    be adjusted; when should we exit and for what reasons?
-# 3. Compare different reward-functions.
-# 4. Compare the PPO versions; why does spin up reset the environment before training by default?
+# 1. Compare different reward-functions, specifically ones that are normalized
+#    from the get-go and use positive rewards.
+# 2. Compare the PPO versions; why does spin up reset the environment before training by default?
+# 3. Run the code several times with different seeds and average-out the results. The built-in plotter
+#    of spin-up can help visualize the differences between runs nicely.
 
 # Things to fix/adjust:
 # 1. min_env_interactions is treated as min by baselines-algorithms and Spin-Up (seemingly),
 #    but not by e.g. SLM Lab algorithms, in the sense that they don't train for
 #    >= min_env_interactions steps, they just experience that many steps.
-# 2. On macOS, when plotting, the closed environments' windows will open up again.
-# 3. Reduce the amount of logging messages.
+# 2. On macOS, when plotting, the closed environments' windows will open up again. <- Not important
+# 3. Check that PPO's intermittent logging is not a fault.
+# 4. Investigate when early stopping should be utilized.
+# 5. Check that using the same seed actually gives the same result.
 
 #########################
 # High-level Parameters #
 #########################
-do_training = False
-do_policy_test = True
+do_training = True
+do_policy_test = False
 do_plots = True
 
 #######################
@@ -167,7 +166,7 @@ def train_algorithm(alg_dict, arch_dict, env_dict, seed=0):
     # Based on example from https://spinningup.openai.com/en/latest/user/running.html
     ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation'], use_torch=(alg_dict['type'] != 'baselines')), 
                                  arch_dict=arch_dict, output_dir=output_dir, slm_type=(alg_dict['type'] == 'slm'))
-    logger_kwargs = dict(output_dir=output_dir, exp_name='experiment_test0_' + output_dir)
+    logger_kwargs = dict(output_dir=output_dir, exp_name='experiment_test0_' + output_dir, log_frequency=alg_dict['log_frequency'])
 
     algorithm_fn = alg_dict['alg_fn']
     env_fn = env_dict['env_fn'] if alg_dict['continuous'] else env_dict['env_fn_disc']
@@ -414,7 +413,7 @@ def main():
         },
     ]
     envs_to_use = ["cartpole"] #["furuta_paper", "furuta_paper_norm"]
-    algorithms_to_use = ["reinforce"] #["a2c", "a2c_s", "ddpg", "ppo", "reinforce"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
+    algorithms_to_use = ["reinforce"] #["a2c", "a2c_s", "dqn", "ddpg", "ppo", "reinforce"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
     architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
 
     envs = get_dicts_in_list_matching_names(envs_to_use, all_environments)

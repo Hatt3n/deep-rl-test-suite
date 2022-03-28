@@ -5,7 +5,7 @@ from torch.optim import Adam
 import gym
 import time
 import deps.spinningup.dansah_custom.ddpg_core as core
-from spinup.utils.logx import EpochLogger
+from deps.spinningup.dansah_custom.logx import EpochLogger
 
 
 class ReplayBuffer:

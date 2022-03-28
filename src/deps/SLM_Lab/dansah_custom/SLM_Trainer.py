@@ -7,7 +7,7 @@ Added by dansah.
 from deps.SLM_Lab.slm_lab.experiment import analysis
 from deps.SLM_Lab.slm_lab.lib import logger, util
 
-from spinup.utils.logx import EpochLogger
+from deps.spinningup.dansah_custom.logx import EpochLogger
 import numpy as np
 import pydash as ps
 import time
@@ -67,7 +67,7 @@ class SLM_Trainer():
             self.agent.update(state, action, reward, next_state, done, rft)
             state = next_state
 
-            if do_extra_logging and (latest_epoch != self.agent.performed_epochs()) and at_least_one_done:
+            if do_extra_logging and latest_epoch != self.agent.performed_epochs() and at_least_one_done:
                 latest_epoch = self.agent.performed_epochs()
                 at_least_one_done = False # We want one Done between each print (i.e. at least one episode)
                 sp_logger.log_tabular('Epoch', latest_epoch)
