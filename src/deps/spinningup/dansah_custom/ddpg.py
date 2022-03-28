@@ -241,7 +241,9 @@ def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         a = ac.act(torch.as_tensor(o, dtype=torch.float32))
         a += noise_scale * np.random.randn(act_dim)
         if env.is_discrete:
-            a = int(a)
+            if len(a.shape) >= 1 and a.shape[0] == 1:
+                a = a[0]
+            a = int(np.round(a))
         return np.clip(a, act_limit_lower, act_limit_upper)
 
     def test_agent():
