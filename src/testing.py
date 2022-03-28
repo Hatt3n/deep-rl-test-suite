@@ -44,14 +44,14 @@ import os
 #    but not by e.g. SLM Lab algorithms, in the sense that they don't train for
 #    >= min_env_interactions steps, they just experience that many steps.
 # 2. On macOS, when plotting, the closed environments' windows will open up again.
-# 3. Reinforce only runs for 2 epochs on Cartpole when set to 50 => Why?
+# 3. Reduce the amount of logging messages.
 
 #########################
 # High-level Parameters #
 #########################
-do_training = True
-do_policy_test = False
-do_plots = False
+do_training = False
+do_policy_test = True
+do_plots = True
 
 #######################
 # Training parameters #
@@ -414,7 +414,7 @@ def main():
         },
     ]
     envs_to_use = ["cartpole"] #["furuta_paper", "furuta_paper_norm"]
-    algorithms_to_use = ["ddpg"] #["a2c", "a2c_s", "ddpg", "ppo", "reinforce"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
+    algorithms_to_use = ["reinforce"] #["a2c", "a2c_s", "ddpg", "ppo", "reinforce"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
     architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
 
     envs = get_dicts_in_list_matching_names(envs_to_use, all_environments)

@@ -28,7 +28,7 @@ algo_env_configs = {
             "training_frequency": 32,
         },
         "reinforce": {
-            "training_frequency": 32, # Value from SLM_Lab spec-file "reinforce_cartpole.json"
+            "training_frequency": 1, # Value from SLM_Lab spec-file "reinforce_cartpole.json"
         },
     },
     "furuta_paper": {
