@@ -12,7 +12,10 @@ By: dansah
 from configs import ALGO_ENV_CONFIGS
 
 from deps.spinningup.dansah_custom import test_policy
-import spinup.utils.plot
+from deps.spinningup.dansah_custom import plot
+
+import pathlib
+from result_maker import make_html
 
 import torch.nn as nn
 
@@ -44,20 +47,22 @@ import os
 # 3. Check that PPO's intermittent logging is not a fault.
 # 4. Investigate when early stopping should be utilized.
 # 5. Check that using the same seed actually gives the same result.
+# 6. Put different architectures in different subplots.
 
 #########################
 # High-level Parameters #
 #########################
-do_training = True
+do_training = False
 do_policy_test = False
 do_plots = True
 
 #######################
 # Training parameters #
 #######################
-EPOCHS=500                                      # The number of parameter updates to perform before stopping trainin. NOTE: This value is not necessarily respected by all algorithms
+EPOCHS=10000                                    # The number of parameter updates to perform before stopping trainin. NOTE: This value is not necessarily respected by all algorithms
 MIN_ENV_INTERACTIONS = EPOCHS * 32+1            # The minimum number of interactions the agents should perform before stopping training.
-base_dir = os.path.join('.', 'out%s' % os.sep)  # The base directory for storing the output of the algorithms.
+BASE_DIR = os.path.join('.', 'out%s' % os.sep)  # The base directory for storing the output of the algorithms.
+WORK_DIR = pathlib.Path().resolve()
 
 ####################
 # Important values #
@@ -152,7 +157,7 @@ def create_ac_kwargs(mlp_architecture=[64,64], activation_func=tf.nn.relu, arch_
     ac_kwargs = dict(hidden_sizes=mlp_architecture, activation=activation_func)
     if slm_type:
         ac_kwargs['activation_name'] = arch_dict['activation']
-        ac_kwargs['rel_output_dir'] = output_dir.replace(base_dir, "")
+        ac_kwargs['rel_output_dir'] = output_dir.replace(BASE_DIR, "")
     return ac_kwargs
 
 def train_algorithm(alg_dict, arch_dict, env_dict, seed=0):
@@ -269,7 +274,21 @@ def get_output_dir(alg_name, arch_name, env_name):
     Returns the approriate output directory name relative to the
     project root for the given experiment.
     """
-    return os.path.join(base_dir + env_name, alg_name, arch_name + os.sep)
+    return os.path.join(BASE_DIR + env_name, alg_name, arch_name + os.sep)
+
+def get_diagram_filepath(env_name, arch_name):
+    """
+    Returns the full filepath that the diagram should use given
+    the provided arguments.
+    """
+    return os.path.join(WORK_DIR, "out", "res", env_name, arch_name + ".svg")
+
+def get_res_filepath():
+    """
+    Returns an appropriate full filepath for the html-file
+    with the results.
+    """
+    return os.path.join(WORK_DIR, "out", "res.html")
 
 def get_activation_by_name(activation_name, use_torch=True):
     """
@@ -413,8 +432,8 @@ def main():
         },
     ]
     envs_to_use = ["cartpole"] #["furuta_paper", "furuta_paper_norm"]
-    algorithms_to_use = ["reinforce"] #["a2c", "a2c_s", "dqn", "ddpg", "ppo", "reinforce"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
-    architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
+    algorithms_to_use = ["a2c", "a2c_s", "dqn", "ddpg", "ppo", "reinforce"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
+    architecture_to_use = ["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
 
     envs = get_dicts_in_list_matching_names(envs_to_use, all_environments)
     algorithms = get_dicts_in_list_matching_names(algorithms_to_use, all_algorithms)
@@ -441,19 +460,30 @@ def main():
                     evaluate_algorithm(alg_dict, arch_dict, env_dict)
 
     if do_plots:
+        res_maker_dict = dict()
         for env_dict in envs:
-            dirs = []
-            alg_names = []
             env_name = env_dict['name']
-            for alg_dict in algorithms:
-                alg_name = alg_dict['name']
-                for arch_dict in architectures:
-                    arch_name = arch_dict['name']
+            res_maker_dict[env_name] = dict()
+            for arch_dict in architectures:
+                dirs = []
+                alg_names = []
+                arch_name = arch_dict['name']
+                res_maker_dict[env_name][arch_name] = dict()
+                for alg_dict in algorithms:    
+                    alg_name = alg_dict['name']    
                     dirs.append(get_output_dir(alg_name, arch_name, env_name))
-                    alg_names.append(alg_name + ' ' + arch_name)
-            annonuce_message("Showing metrics for environment %s" % env_name)
-            metrics = ['Performance']
-            spinup.utils.plot.make_plots(dirs, legend=alg_names, xaxis='TotalEnvInteracts', values=metrics, count=False, smooth=1, select=None, exclude=None, estimator='mean')
+                    alg_names.append(alg_name)
+                annonuce_message("Analyzing metrics for environment %s" % env_name)
+                metrics = ['Performance']
+                fname=get_diagram_filepath(env_name, arch_name)
+                res_maker_dict[env_name][arch_name]["Performance"] = fname
+                plot.make_plots(dirs, legend=alg_names, xaxis='TotalEnvInteracts', values=metrics, count=False, 
+                                smooth=1, select=None, exclude=None, estimator='mean', fname=fname)
+        res_file = get_res_filepath()
+        make_html(res_file, res_maker_dict)
+        print(res_file)
+        import webbrowser
+        assert webbrowser.get().open("file://" + res_file)
 
 if __name__ == "__main__":
     main()
