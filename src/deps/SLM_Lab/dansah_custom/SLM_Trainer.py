@@ -120,11 +120,18 @@ class SLM_Trainer():
 
     def set_seed(self, spec):
         """
-        Sets the seed for random number generation, in a fashion 
-        similar to that in src/deps/SLM_Lab/slm_lab/lib/util.py.
+        Sets the seed for random number generation in
+        the environment.
         """
         random_seed = spec['meta']['random_seed']
-        torch.cuda.manual_seed_all(random_seed)
-        torch.manual_seed(random_seed)
-        np.random.seed(random_seed)
         self.env.seed(random_seed)
+
+def set_global_seed(spec):
+    """
+    Sets the global seed for random number generation, in a fashion 
+    similar to that in src/deps/SLM_Lab/slm_lab/lib/util.py.
+    """
+    random_seed = spec['meta']['random_seed']
+    torch.cuda.manual_seed_all(random_seed)
+    torch.manual_seed(random_seed)
+    np.random.seed(random_seed)

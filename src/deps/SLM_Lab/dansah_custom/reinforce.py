@@ -16,7 +16,7 @@ import torch
 
 from deps.SLM_Lab.dansah_custom.agent import Agent, Body
 from deps.SLM_Lab.dansah_custom.env_wrapper import EnvWrapper
-from deps.SLM_Lab.dansah_custom.SLM_Trainer import SLM_Trainer
+from deps.SLM_Lab.dansah_custom.SLM_Trainer import SLM_Trainer, set_global_seed
 
 import os
 
@@ -104,6 +104,8 @@ def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
         #    }]
         #}
     }
+
+    set_global_seed(spec)
 
     env = EnvWrapper(env_fn, spec)
     agent = Agent(spec, Body(env, spec))

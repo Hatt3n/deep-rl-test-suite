@@ -6,7 +6,7 @@ Added by dansah.
 
 from deps.SLM_Lab.dansah_custom.agent import Agent, Body
 from deps.SLM_Lab.dansah_custom.env_wrapper import EnvWrapper
-from deps.SLM_Lab.dansah_custom.SLM_Trainer import SLM_Trainer
+from deps.SLM_Lab.dansah_custom.SLM_Trainer import SLM_Trainer, set_global_seed
 from deps.SLM_Lab.slm_lab.lib import util
 
 import os
@@ -19,6 +19,8 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
 
     if min_env_interactions == 0:
         min_env_interactions = epochs * steps_per_epoch
+
+    os.environ['lab_mode'] = mode
 
     spec = { # Based on a2c_gae_cartpole.json in src\deps\SLM_Lab\slm_lab\spec\benchmark\a2c
         "name": "a2c_furuta_spec",
@@ -112,7 +114,8 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
         #    }]
         #},
     }
-    os.environ['lab_mode'] = mode
+
+    set_global_seed(spec)
 
     env = EnvWrapper(env_fn, spec)
     a2c_agent = Agent(spec, Body(env, spec))
