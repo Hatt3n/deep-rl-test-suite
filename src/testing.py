@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-03-28
+Last edit: 2022-03-29
 By: dansah
 """
 
@@ -46,20 +46,19 @@ import os
 # 2. On macOS, when plotting, the closed environments' windows will open up again. <- Not important
 # 3. Check that PPO's intermittent logging is not a fault.
 # 4. Investigate when early stopping should be utilized.
-# 5. Check that using the same seed actually gives the same result.
-# 6. Put different architectures in different subplots.
+# 5. Fix DDPG not giving the same result for the same seed.
 
 #########################
 # High-level Parameters #
 #########################
-do_training = False
+do_training = True
 do_policy_test = False
 do_plots = True
 
 #######################
 # Training parameters #
 #######################
-EPOCHS=10000                                    # The number of parameter updates to perform before stopping trainin. NOTE: This value is not necessarily respected by all algorithms
+EPOCHS=500                                      # The number of parameter updates to perform before stopping trainin. NOTE: This value is not necessarily respected by all algorithms
 MIN_ENV_INTERACTIONS = EPOCHS * 32+1            # The minimum number of interactions the agents should perform before stopping training.
 BASE_DIR = os.path.join('.', 'out%s' % os.sep)  # The base directory for storing the output of the algorithms.
 WORK_DIR = pathlib.Path().resolve()
@@ -166,7 +165,7 @@ def train_algorithm(alg_dict, arch_dict, env_dict, seed=0):
     returned by get_output_dir.
     Nothing is returned.
     """
-    output_dir = get_output_dir(alg_dict['name'], arch_dict['name'], env_dict['name'])
+    output_dir = get_output_dir(alg_dict['name'], arch_dict['name'], env_dict['name'], seed)
 
     # Based on example from https://spinningup.openai.com/en/latest/user/running.html
     ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation'], use_torch=(alg_dict['type'] != 'baselines')), 
@@ -193,13 +192,13 @@ def train_algorithm(alg_dict, arch_dict, env_dict, seed=0):
 ########################
 # Evaluation functions #
 ########################
-def evaluate_algorithm(alg_dict, arch_dict, env_dict):
+def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed):
     """
     Evaluate a trained algorithm by applying it and rendering the result.
     """
     max_ep_len = env_dict['max_ep_len']
     env_fn = env_dict['env_fn'] if alg_dict['continuous'] else env_dict['env_fn_disc']
-    output_dir = get_output_dir(alg_dict['name'], arch_dict['name'], env_dict['name'])
+    output_dir = get_output_dir(alg_dict['name'], arch_dict['name'], env_dict['name'], seed)
     if alg_dict['type'] == 'spinup':
         itr = -1
         force_disc = env_fn().is_discrete
@@ -269,12 +268,12 @@ def heads_up_message(message):
     """
     print("----> %s <----" % (message))
 
-def get_output_dir(alg_name, arch_name, env_name):
+def get_output_dir(alg_name, arch_name, env_name, seed):
     """
     Returns the approriate output directory name relative to the
     project root for the given experiment.
     """
-    return os.path.join(BASE_DIR + env_name, alg_name, arch_name + os.sep)
+    return os.path.join(BASE_DIR + env_name, alg_name, arch_name, "seed" + str(seed) + os.sep)
 
 def get_diagram_filepath(env_name, arch_name):
     """
@@ -430,10 +429,11 @@ def main():
             "layers": [400, 300],
             "activation": "relu"
         },
-    ]
+    ] # Confirmed: a2c, dqn, a2c_s, reinforce, ppo, 
     envs_to_use = ["cartpole"] #["furuta_paper", "furuta_paper_norm"]
-    algorithms_to_use = ["a2c", "a2c_s", "dqn", "ddpg", "ppo", "reinforce"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
-    architecture_to_use = ["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
+    algorithms_to_use = ["ddpg"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
+    architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
+    seeds = [0]
 
     envs = get_dicts_in_list_matching_names(envs_to_use, all_environments)
     algorithms = get_dicts_in_list_matching_names(algorithms_to_use, all_algorithms)
@@ -447,17 +447,19 @@ def main():
                 alg_dict = {**alg_dict, **ALGO_ENV_CONFIGS[env_name][alg_name]} # Merge-in training parameters.
                 annonuce_message("Now training with %s in environment %s" % (alg_name, env_name))
                 for arch_dict in architectures:
-                    heads_up_message("Using arch %s" % (arch_dict['name']))
-                    train_algorithm(alg_dict, arch_dict, env_dict)
+                    for seed in seeds:
+                        heads_up_message("Using arch %s and seed %s" % (arch_dict['name'], seed))
+                        train_algorithm(alg_dict, arch_dict, env_dict, seed)
 
     if do_policy_test:
+        seed = seeds[0]
         for env_dict in envs:
             for alg_dict in algorithms:
                 alg_name = alg_dict['name']
-                annonuce_message("Now testing %s in environment %s" % (alg_name, env_dict['name']))
+                annonuce_message("Now testing %s in environment %s with seeds %s" % (alg_name, env_dict['name'], seed))
                 for arch_dict in architectures:
                     heads_up_message("Using arch %s" % (arch_dict['name']))
-                    evaluate_algorithm(alg_dict, arch_dict, env_dict)
+                    evaluate_algorithm(alg_dict, arch_dict, env_dict, seed)
 
     if do_plots:
         res_maker_dict = dict()
@@ -470,9 +472,10 @@ def main():
                 arch_name = arch_dict['name']
                 res_maker_dict[env_name][arch_name] = dict()
                 for alg_dict in algorithms:    
-                    alg_name = alg_dict['name']    
-                    dirs.append(get_output_dir(alg_name, arch_name, env_name))
+                    alg_name = alg_dict['name']
                     alg_names.append(alg_name)
+                    for seed in seeds:
+                        dirs.append(get_output_dir(alg_name, arch_name, env_name, seed))
                 annonuce_message("Analyzing metrics for environment %s" % env_name)
                 metrics = ['Performance']
                 fname=get_diagram_filepath(env_name, arch_name)
