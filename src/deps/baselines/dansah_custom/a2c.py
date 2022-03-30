@@ -122,6 +122,7 @@ class Model(object):
         self.load = functools.partial(tf_util.load_variables, sess=sess)
         tf.global_variables_initializer().run(session=sess)
 
+MODEL_FILE_NAME="saved_model"
 
 # Wrapper providing similar API to spin up.
 # Modified by @dansah
@@ -154,7 +155,7 @@ def a2c(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=4000,
                       logger_kwargs=logger_kwargs,
                       **ac_kwargs
                      ) 
-        model.save(osp.expanduser(logger_kwargs['output_dir'][0:-2]))
+        model.save(osp.expanduser(logger_kwargs['output_dir'] + MODEL_FILE_NAME))
         tf_util.get_session().close()
     else:
         model = learn(network="mlp", # Must respect the ac_kwargs 
@@ -162,7 +163,7 @@ def a2c(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=4000,
                       seed=seed,
                       nsteps=0, # Disable training, we just want to load
                       num_epochs=0,
-                      load_path=load_path[0:-2],
+                      load_path=load_path + MODEL_FILE_NAME,
                       **ac_kwargs
                       ) 
         return model
@@ -276,14 +277,16 @@ def learn(
 
     # Start total timer
     tstart = time.time()
+    runner.set_time(tstart)
 
     for epoch in range(num_epochs): # Epoch = Update #for update in range(1, total_timesteps//nbatch+1):
         # Get mini batch of experiences
-        obs, states, rewards, masks, actions, values, epinfos = runner.run() # Will run for nsteps
+        obs, states, rewards, masks, actions, values, epinfos = runner.run(epoch) # Will run for nsteps
         epinfobuf.extend(epinfos)
 
         policy_loss, value_loss, policy_entropy = model.train(obs, states, rewards, masks, actions, values)
         nseconds = time.time()-tstart
+        logger.store(LossV=float(value_loss))
 
         # Calculate the fps (frame per second)
         fps = int((epoch*nbatch)/nseconds)
@@ -321,19 +324,5 @@ def learn(
             bs_logger.record_tabular("eplenmean", safemean([epinfo['l'] for epinfo in epinfobuf]))
             bs_logger.dump_tabular()
 
-            logger.log_tabular('Epoch', epoch+1)
-            logger.log_tabular('EpRet', with_min_and_max=True)
-            logger.log_tabular('EpLen', average_only=True)
-            #logger.log_tabular('VVals', with_min_and_max=True)
-            logger.log_tabular('TotalEnvInteracts', (epoch+1)*nsteps)
-            #logger.log_tabular('LossPi', average_only=True)
-            logger.log_tabular('LossV', float(value_loss))
-            #logger.log_tabular('DeltaLossPi', average_only=True)
-            #logger.log_tabular('DeltaLossV', average_only=True)
-            #logger.log_tabular('Entropy', average_only=True)
-            #logger.log_tabular('ClipFrac', average_only=True)
-            #logger.log_tabular('StopIter', average_only=True)
-            logger.log_tabular('Time', time.time()-tstart)
-            logger.dump_tabular()
     return model
 

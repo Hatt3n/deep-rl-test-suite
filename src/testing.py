@@ -36,8 +36,6 @@ import os
 # 1. Compare different reward-functions, specifically ones that are normalized
 #    from the get-go and use positive rewards.
 # 2. Compare the PPO versions; why does spin up reset the environment before training by default?
-# 3. Run the code several times with different seeds and average-out the results. The built-in plotter
-#    of spin-up can help visualize the differences between runs nicely.
 
 # Things to fix/adjust:
 # 1. min_env_interactions is treated as min by baselines-algorithms and Spin-Up (seemingly),
@@ -355,7 +353,7 @@ def main():
             "name": "cartpole",
             "env_fn": make_cartpole_env,
             "env_fn_disc": make_cartpole_env,
-            "max_ep_len": 500, # Any value can be chosen. A value of 100 or more should be reasonable.
+            "max_ep_len": 200, # Any value can be chosen. A value of 100 or more should be reasonable.
         },
         {
             "name": "walker_2d",
@@ -430,9 +428,9 @@ def main():
         },
     ] # Confirmed: a2c, dqn, a2c_s, reinforce, ppo, 
     envs_to_use = ["cartpole"] #["furuta_paper", "furuta_paper_norm"]
-    algorithms_to_use = ["ddpg"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
+    algorithms_to_use = ["a2c"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
     architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
-    seeds = [0]
+    seeds = [0, 100, 1000]
 
     envs = get_dicts_in_list_matching_names(envs_to_use, all_environments)
     algorithms = get_dicts_in_list_matching_names(algorithms_to_use, all_algorithms)
@@ -472,8 +470,8 @@ def main():
                 res_maker_dict[env_name][arch_name] = dict()
                 for alg_dict in algorithms:    
                     alg_name = alg_dict['name']
-                    alg_names.append(alg_name)
                     for seed in seeds:
+                        alg_names.append(alg_name)
                         dirs.append(get_output_dir(alg_name, arch_name, env_name, seed))
                 annonuce_message("Analyzing metrics for environment %s" % env_name)
                 metrics = ['Performance']

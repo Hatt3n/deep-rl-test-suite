@@ -313,14 +313,18 @@ def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                 update(data=batch)
 
         # End of epoch handling
-        if latest_epoch != epoch and at_least_one_done:
 
+        # Save model
+        if (epoch % save_freq == 0) or (epoch == epochs):
+            logger.save_state({'env': env}, None)
+
+        # Logging
+        real_curr_t = t +1
+        if real_curr_t % logger.log_frequency == 0 and epoch > 0:
+            assert latest_epoch != epoch
+            assert at_least_one_done
             latest_epoch = epoch
             at_least_one_done = False
-
-            # Save model
-            if (epoch % save_freq == 0) or (epoch == epochs):
-                logger.save_state({'env': env}, None)
 
             # Test the performance of the deterministic version of the agent.
             test_agent()
@@ -331,7 +335,7 @@ def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             logger.log_tabular('TestEpRet', with_min_and_max=True)
             logger.log_tabular('EpLen', average_only=True)
             logger.log_tabular('TestEpLen', average_only=True)
-            logger.log_tabular('TotalEnvInteracts', t)
+            logger.log_tabular('TotalEnvInteracts', real_curr_t)
             logger.log_tabular('QVals', with_min_and_max=True)
             logger.log_tabular('LossPi', average_only=True)
             logger.log_tabular('LossQ', average_only=True)

@@ -33,6 +33,7 @@ class SLM_Trainer():
             env_interactions = 0
 
         at_least_one_done = False
+        real_curr_t = 0
         # Standard
         logger.info(f'Running RL loop for trial {self.spec["meta"]["trial"]} session {self.index}')
         clock = self.env.clock
@@ -52,6 +53,7 @@ class SLM_Trainer():
             with torch.no_grad():
                 action = self.agent.act(state)
             next_state, reward, done, info = self.env.step(action)
+            real_curr_t += 1
             rft = 0
             if done and do_extra_logging:
                 # Update counters (Based on runner.py in src\baselines\baselines\a2c)
@@ -59,6 +61,7 @@ class SLM_Trainer():
                 maybeepinfo = info.get('episode')
                 if maybeepinfo:
                     env_interactions += maybeepinfo['l']
+                    assert real_curr_t == env_interactions
                     ep_len = maybeepinfo['l']
                     sp_logger.store(EpRet=maybeepinfo['r'], EpLen=ep_len)
                     rft_string = info.get('rft')
@@ -67,14 +70,16 @@ class SLM_Trainer():
             self.agent.update(state, action, reward, next_state, done, rft)
             state = next_state
 
-            if do_extra_logging and latest_epoch != self.agent.performed_epochs() and at_least_one_done:
+            if do_extra_logging and real_curr_t % sp_logger.log_frequency == 0:
+                assert latest_epoch != self.agent.performed_epochs()
+                assert at_least_one_done
                 latest_epoch = self.agent.performed_epochs()
                 at_least_one_done = False # We want one Done between each print (i.e. at least one episode)
                 sp_logger.log_tabular('Epoch', latest_epoch)
                 sp_logger.log_tabular('EpRet', with_min_and_max=True)
                 sp_logger.log_tabular('EpLen', average_only=True)
                 #sp_logger.log_tabular('VVals', with_min_and_max=True)
-                sp_logger.log_tabular('TotalEnvInteracts', env_interactions)
+                sp_logger.log_tabular('TotalEnvInteracts', real_curr_t)
                 #sp_logger.log_tabular('LossPi', average_only=True)
                 #sp_logger.log_tabular('LossV', float(value_loss))
                 #sp_logger.log_tabular('DeltaLossPi', average_only=True)

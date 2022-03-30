@@ -283,7 +283,7 @@ class Logger:
         Writes both to stdout, and to the output file.
         """
         self.log_counter += 1
-        print_log = self.log_counter % self.log_frequency == 0
+        print_log = True #self.log_counter % self.log_frequency == 0
         if proc_id()==0:
             vals = []
             key_lens = [len(key) for key in self.log_headers]

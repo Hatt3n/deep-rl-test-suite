@@ -355,15 +355,19 @@ def ppo(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
 
                 real_epoch += 1
 
+            real_curr_t = epoch * steps_per_epoch + t + 1
+
             # Log info about epoch
-            if latest_epoch != real_epoch and at_least_one_done: # TODO: Adjust so that more prints are received (so to speak)
+            if real_curr_t % logger.log_frequency == 0:
+                assert latest_epoch != real_epoch
+                assert at_least_one_done
                 latest_epoch = real_epoch
                 at_least_one_done = False
                 logger.log_tabular('Epoch', real_epoch)
                 logger.log_tabular('EpRet', with_min_and_max=True)
                 logger.log_tabular('EpLen', average_only=True)
                 logger.log_tabular('VVals', with_min_and_max=True)
-                logger.log_tabular('TotalEnvInteracts', real_epoch*steps_per_epoch)
+                logger.log_tabular('TotalEnvInteracts', real_curr_t)
                 logger.log_tabular('LossPi', average_only=True)
                 logger.log_tabular('LossV', average_only=True)
                 logger.log_tabular('DeltaLossPi', average_only=True)

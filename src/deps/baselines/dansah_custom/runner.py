@@ -1,6 +1,7 @@
 import numpy as np
 from baselines.a2c.utils import discount_with_dones
 from baselines.common.runners import AbstractEnvRunner
+import time
 
 class Runner(AbstractEnvRunner):
     """
@@ -20,9 +21,13 @@ class Runner(AbstractEnvRunner):
         self.logger = logger
         self.max_ep_len = max_ep_len
         self.at_least_one_done = False
+    
+    def set_time(self, tstart):
+        """Set the point in time at which training started."""
+        self.tstart = tstart
 
     # Modified by @dansah
-    def run(self):
+    def run(self, epoch):
         # We initialize the lists that will contain the mb of experiences
         mb_obs, mb_rewards, mb_actions, mb_values, mb_dones = [],[],[],[],[]
         mb_states = self.states
@@ -61,6 +66,25 @@ class Runner(AbstractEnvRunner):
             self.dones = dones
             self.obs = obs
             mb_rewards.append(rewards)
+
+            # Logging
+            real_curr_t = epoch*self.nsteps + n + 1
+            if real_curr_t % self.logger.log_frequency == 0:
+                self.logger.log_tabular('Epoch', epoch)
+                self.logger.log_tabular('EpRet', with_min_and_max=True)
+                self.logger.log_tabular('EpLen', average_only=True)
+                #logger.log_tabular('VVals', with_min_and_max=True)
+                self.logger.log_tabular('TotalEnvInteracts', real_curr_t)
+                #logger.log_tabular('LossPi', average_only=True)
+                self.logger.log_tabular('LossV', average_only=True)
+                #logger.log_tabular('DeltaLossPi', average_only=True)
+                #logger.log_tabular('DeltaLossV', average_only=True)
+                #logger.log_tabular('Entropy', average_only=True)
+                #logger.log_tabular('ClipFrac', average_only=True)
+                #logger.log_tabular('StopIter', average_only=True)
+                self.logger.log_tabular('Time', time.time()-self.tstart)
+                self.logger.dump_tabular()
+
         mb_dones.append(self.dones)
 
         # Batch of steps to batch of rollouts
