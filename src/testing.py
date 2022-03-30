@@ -41,22 +41,20 @@ import os
 # 1. min_env_interactions is treated as min by baselines-algorithms and Spin-Up (seemingly),
 #    but not by e.g. SLM Lab algorithms, in the sense that they don't train for
 #    >= min_env_interactions steps, they just experience that many steps.
-# 2. On macOS, when plotting, the closed environments' windows will open up again. <- Not important
-# 3. Check that PPO's intermittent logging is not a fault.
-# 4. Investigate when early stopping should be utilized.
+# 2. Investigate when early stopping should be utilized.
+# 3. The SLM-logging could maybe be disabled or tweaked.
 
 #########################
 # High-level Parameters #
 #########################
-do_training = True
+do_training = False
 do_policy_test = False
 do_plots = True
 
 #######################
 # Training parameters #
 #######################
-EPOCHS=500                                      # The number of parameter updates to perform before stopping trainin. NOTE: This value is not necessarily respected by all algorithms
-MIN_ENV_INTERACTIONS = EPOCHS * 32+1            # The minimum number of interactions the agents should perform before stopping training.
+MIN_ENV_INTERACTIONS = 100000                    # The minimum number of interactions the agents should perform before stopping training.
 BASE_DIR = os.path.join('.', 'out%s' % os.sep)  # The base directory for storing the output of the algorithms.
 WORK_DIR = pathlib.Path().resolve()
 
@@ -428,9 +426,9 @@ def main():
         },
     ] # Confirmed: a2c, dqn, a2c_s, reinforce, ppo, 
     envs_to_use = ["cartpole"] #["furuta_paper", "furuta_paper_norm"]
-    algorithms_to_use = ["a2c"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
-    architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
-    seeds = [0, 100, 1000]
+    algorithms_to_use = ["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
+    architecture_to_use = ["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
+    seeds = [0, 10, 100, 1000]
 
     envs = get_dicts_in_list_matching_names(envs_to_use, all_environments)
     algorithms = get_dicts_in_list_matching_names(algorithms_to_use, all_algorithms)

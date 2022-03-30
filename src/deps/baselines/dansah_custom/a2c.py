@@ -145,7 +145,7 @@ def a2c(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=4000,
         #              **ac_kwargs
         #              ) 
         model = learn(network="mlp", # Must respect the ac_kwargs 
-                      env=DummyVecEnv(env_fns=[env_fn]),
+                      env=DummyVecEnv(env_fns=[env_fn], max_ep_len=max_ep_len),
                       seed=seed,
                       nsteps=steps_per_epoch, # Steps per epoch = steps per update
                       num_epochs=epochs,

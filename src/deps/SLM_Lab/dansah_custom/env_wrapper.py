@@ -117,7 +117,7 @@ class EnvWrapper():
         self._update_total_reward(reward, info)
         if self.to_render:
             self.env.render()
-        if not self.is_venv and self.clock.t > self.max_t:
+        if not self.is_venv and self.clock.t >= self.max_t:
             done = True
         self.done = done
         if done:
