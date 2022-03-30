@@ -13,6 +13,12 @@ algo_env_configs = {
         "a2c_s": {
             "training_frequency": 32,
             "log_frequency": 400,
+            "specific": {                   # All from SLM_Lab spec-file "a2c_gae_cartpole.json"
+                "action_policy": "default",
+                "net": {
+                    "normalize": True,
+                },
+            },
         },
         "ddpg": {
             "training_frequency": 32,
@@ -26,6 +32,14 @@ algo_env_configs = {
             "log_frequency": 400,           # How often logging should be performed. NOTE: Must be >= max(training_frequency, max_ep_len)
             "specific": {                   # NOTE: These are algorithm-specific parameters, i.e. not all algorithms use them.
                 "training_start_step": 32,  # Value from SLM_Lab spec-file "dqn_cartpole.json"
+                "explore_var_spec": {       # All from SLM_Lab spec-file "dqn_cartpole.json"
+                    "start_val": 5.0,
+                    "end_val": 0.5,
+                    "end_step": 4000,
+                },
+                "memory": {                 # All from SLM_Lab spec-file "dqn_cartpole.json"
+                    "max_size": 10000,
+                },
             },
         },
         "ppo": {

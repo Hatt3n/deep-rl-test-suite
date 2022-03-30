@@ -16,9 +16,8 @@ logger = logger.get_logger(__name__)
 
 
 def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, 
-        epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train', training_start_step=-1):
-    if training_start_step != -1:
-        print("It worked, got %s and %s" % (training_start_step, steps_per_epoch))
+        epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train', 
+        training_start_step=-1, explore_var_spec=None, memory=None):
 
     if min_env_interactions == 0:
         min_env_interactions = epochs * steps_per_epoch
@@ -26,7 +25,7 @@ def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
     os.environ['lab_mode'] = mode
 
     spec = {
-        "name": "dqn_boltzmann_furuta",
+        "name": "dqn_boltzmann",
         "agent": [{
             "name": "DQN",
             "algorithm": {
@@ -35,10 +34,10 @@ def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
                 "action_policy": "boltzmann",
                 "explore_var_spec": {
                     "name": "linear_decay",
-                    "start_val": 2.0,
-                    "end_val": 0.1,
+                    "start_val": 2.0 if explore_var_spec is None else explore_var_spec['start_val'],
+                    "end_val": 0.1 if explore_var_spec is None else explore_var_spec['end_val'],
                     "start_step": 0,
-                    "end_step": 40000, # TODO: Consider adjusting
+                    "end_step": 40000 if explore_var_spec is None else explore_var_spec['end_step'], 
                 },
                 "gamma": 0.99,
                 "training_batch_iter": 2,
@@ -49,7 +48,7 @@ def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
             "memory": {
                 "name": "Replay",
                 "batch_size": 32,
-                "max_size": 100000, # TODO: Consider adjusting
+                "max_size": 100000 if memory is None else memory['max_size'],
                 "use_cer": False
             },
             "net": {

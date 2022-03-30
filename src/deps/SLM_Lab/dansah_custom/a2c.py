@@ -12,7 +12,8 @@ from deps.SLM_Lab.slm_lab.lib import util
 import os
 
 def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, 
-        epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train'):
+        epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train',
+        action_policy="epsilon_greedy", net=None):
     """
     mode: Should be 'train' or 'enjoy'.
     """
@@ -29,7 +30,7 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
             "algorithm": {
                 "name": "ActorCritic",
                 "action_pdtype": "default",
-                "action_policy": "epsilon_greedy", # TODO: Provide parameters.
+                "action_policy": action_policy, # TODO: Provide parameters.
                 "explore_var_spec": None,
                 "gamma": 0.99,
                 "lam": 0.95,
@@ -53,7 +54,7 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
                 "hid_layers": ac_kwargs['hidden_sizes'],
                 "hid_layers_activation": ac_kwargs['activation_name'],
                 "init_fn": None,
-                "normalize": False,
+                "normalize": False if net is None else net['normalize'],
                 "batch_norm": False,
                 "clip_grad_val": 0.5,
                 "use_same_optim": True,
