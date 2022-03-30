@@ -155,7 +155,11 @@ def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         act_limit_lower = env.action_space.low[0]
         act_limit_upper = env.action_space.high[0]
 
-    env.seed(seed) # Added by dansah
+    # Added by dansah
+    env.seed(seed)
+    env.action_space.seed(seed)
+    test_env.seed(seed)
+    test_env.action_space.seed(seed)
 
     # Create actor-critic module and target networks
     ac = actor_critic(env.observation_space, env.action_space, env.is_discrete, **ac_kwargs)

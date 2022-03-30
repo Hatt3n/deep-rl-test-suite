@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-03-29
+Last edit: 2022-03-30
 By: dansah
 """
 
@@ -46,7 +46,6 @@ import os
 # 2. On macOS, when plotting, the closed environments' windows will open up again. <- Not important
 # 3. Check that PPO's intermittent logging is not a fault.
 # 4. Investigate when early stopping should be utilized.
-# 5. Fix DDPG not giving the same result for the same seed.
 
 #########################
 # High-level Parameters #
