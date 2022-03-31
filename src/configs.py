@@ -65,6 +65,8 @@ algo_env_configs = {
             "log_frequency": 2000,
             "specific": {
                 "start_steps": 8000,
+                #"replay_size": 10000,
+                #"batch_size": 10,
             },
         },
         "dqn": {
