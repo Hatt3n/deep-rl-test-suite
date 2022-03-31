@@ -61,8 +61,11 @@ algo_env_configs = {
             "log_frequency": 4100,
         },
         "ddpg": {
-            "training_frequency": 4008,
-            "log_frequency": 4100,
+            "training_frequency": 256,
+            "log_frequency": 2000,
+            "specific": {
+                "start_steps": 8000,
+            },
         },
         "dqn": {
             "training_frequency": 4008,
