@@ -36,7 +36,7 @@ class FurutaPendulumEnv(gym.core.Env):
 
     def __init__(self, wrap_angles=True):
         # Required
-        self.MAX_TORQUE = 250 # TODO: Adjust
+        self.MAX_TORQUE = 200 # Same as in "A Reinforcement Learning Controller for the Swing-Up of the Furuta Pendulum" by D. Guida et al. (2020)
         self.action_space = spaces.Box(low=np.array([-float(self.MAX_TORQUE)]), high=np.array([float(self.MAX_TORQUE)]), dtype=np.float16) # Experiment with np.float32 vs 16.
         self.observation_space = spaces.Box(low=-float("inf"), high=float("inf"), shape=(5,), dtype=np.float16) # Old shape was (3,) new is (5,)
 
@@ -45,11 +45,18 @@ class FurutaPendulumEnv(gym.core.Env):
         self.TIME_LIMIT = 10.0 # Seconds
         self.DT = 0.02 # Time step size in seconds
 
+        # The following parameters are from "A Reinforcement Learning Controller for the Swing-Up of the Furuta Pendulum" by D. Guida et al. (2020)
+        self.r = 0.025 # meters, radius of the arms
+        self.l = 0.5 # meters, half the length of the arms
+        self.m = 1.0 # kg, mass of the arms
+
+        # Misc
         self.viewer = None
         self.np_random = None # Not needed in modern versions of OpenAI Gym
 
         self.wrap_angles = wrap_angles
         self.is_discrete = False # Used by SLM Lab
+        self.seed()
     
     def seed(self, seed=None): # Not needed in modern versions of OpenAI Gym
         if seed is not None or self.np_random is None:
@@ -89,17 +96,17 @@ class FurutaPendulumEnv(gym.core.Env):
         """
         Resets the environment to an initial state and returns an initial
         observation.
+        NOTE: The seed parameter is ignored. Use the 'seed' method to seed.
         Returns:
             observation (object): the initial observation.
         """
         #super().reset(seed=seed) # Only works in modern versions of OpenAI Gym
-        self.seed(seed)
         
         # Reset the internal state.
         self.internal_state = {
             "furuta_ode": deps.ipm_python.furuta.FurutaODE(wrap_angles=self.wrap_angles),
         }
-        self.internal_state["furuta_ode"].init(theta0=self.START_THETA)
+        self.internal_state["furuta_ode"].init(theta0=self.START_THETA, m=self.m, l=self.l, r=self.r)
         self.epinfo = {'r': np.float16(0), 'l': np.int16(0)}
 
         return self._get_observed_state_from_internal(self._get_internal_state())
