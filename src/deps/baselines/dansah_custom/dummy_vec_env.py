@@ -11,7 +11,7 @@ class DummyVecEnv(VecEnv):
 
     Modified by @dansah
     """
-    def __init__(self, env_fns, max_ep_len):
+    def __init__(self, env_fns, max_ep_len, collect_data=False):
         """
         Arguments:
 
@@ -33,6 +33,14 @@ class DummyVecEnv(VecEnv):
         self.total_reward = np.float16(0)
         self.ep_len_counter = 0
         self.max_ep_len = max_ep_len
+        if collect_data:
+            self.env.collect_data()
+
+    def get_data(self):
+        try:
+            return self.env.get_data()
+        except:
+            return None
 
     def step_async(self, actions):
         listify = True

@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-03-30
+Last edit: 2022-04-01
 By: dansah
 """
 
@@ -48,20 +48,20 @@ import os
 # High-level Parameters #
 #########################
 do_training = False
-do_policy_test = False
+do_policy_test = True
 do_plots = True
 
 #######################
 # Training parameters #
 #######################
-MIN_ENV_INTERACTIONS = 100000                    # The minimum number of interactions the agents should perform before stopping training.
+MIN_ENV_INTERACTIONS = 10000                    # The minimum number of interactions the agents should perform before stopping training.
 BASE_DIR = os.path.join('.', 'out%s' % os.sep)  # The base directory for storing the output of the algorithms.
 WORK_DIR = pathlib.Path().resolve()
 
 ####################
 # Important values #
 ####################
-
+RENDER_TYPE = "3d"                              # Whether to use 3d-rendering for the Furuta environments or not.
 
 #########################
 # Environment functions #
@@ -187,13 +187,21 @@ def train_algorithm(alg_dict, arch_dict, env_dict, seed=0):
 ########################
 # Evaluation functions #
 ########################
-def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed):
+def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
     """
     Evaluate a trained algorithm by applying it and rendering the result.
+
+    render_type (string): one of ["def", "3d"]
     """
     max_ep_len = env_dict['max_ep_len']
     env_fn = env_dict['env_fn'] if alg_dict['continuous'] else env_dict['env_fn_disc']
     output_dir = get_output_dir(alg_dict['name'], arch_dict['name'], env_dict['name'], seed)
+    use_def_render = (render_type=="def")
+    use_3d_render = (render_type=="3d")
+    if not use_def_render and not use_3d_render:
+        raise NotImplementedError("The render type must be def or 3d, got %s" % render_type)
+    collected_data = None
+
     if alg_dict['type'] == 'spinup':
         itr = -1
         force_disc = env_fn().is_discrete
@@ -201,7 +209,11 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed):
                                                           itr if itr >=0 else 'last',
                                                           False,  # Deterministic true/false. Only used by the SAC algorithm.
                                                           force_disc)
-        test_policy.run_policy(env, get_action, max_ep_len=max_ep_len, num_episodes=2, render=True)
+        if use_3d_render:
+            env.collect_data()
+        test_policy.run_policy(env, get_action, max_ep_len=max_ep_len, num_episodes=2, render=use_def_render)
+        if use_3d_render:
+            collected_data = env.get_data()
         env.close()
     elif alg_dict['type'] == 'baselines':
         with tf.Graph().as_default():
@@ -209,10 +221,11 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed):
                                     load_path=output_dir)
             # Based on code from the file https://github.com/openai/baselines/blob/master/baselines/run.py
             from baselines import logger
-            from baselines.common.vec_env.dummy_vec_env import VecEnv, DummyVecEnv
+            from baselines.common.vec_env.dummy_vec_env import VecEnv
             from baselines.common import tf_util
+            from deps.baselines.dansah_custom.dummy_vec_env import DummyVecEnv
             logger.log("Running trained model")
-            env = DummyVecEnv(env_fns=[env_fn])
+            env = DummyVecEnv(env_fns=[env_fn], collect_data=use_3d_render)
             obs = env.reset()
 
             state = model.initial_state if hasattr(model, 'initial_state') else None
@@ -229,22 +242,30 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed):
 
                 obs, rew, done, _ = env.step(actions)
                 episode_rew += rew
-                env.render()
+                if use_def_render:
+                    env.render()
                 done_any = done.any() if isinstance(done, np.ndarray) else done
                 if done_any:
                     current_episode += 1
                     for i in np.nonzero(done)[0]:
                         print('episode_rew={}'.format(episode_rew[i]))
                         episode_rew[i] = 0
+            collected_data = env.get_data()
             env.close()
             tf_util.get_session().close()
     elif alg_dict['type'] == 'slm':
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation'], use_torch=True), 
                                      arch_dict=arch_dict, output_dir=output_dir, slm_type=True)
-        alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=max_ep_len, 
-                           min_env_interactions=2*max_ep_len, logger_kwargs=dict(), seed=0, mode='enjoy')
+        collected_data = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=max_ep_len, 
+                                            min_env_interactions=2*max_ep_len, logger_kwargs=dict(), seed=0, mode='enjoy', collect_data=use_3d_render)
     else:
         raise NotImplementedError("No handler for algorithm type %s" % (alg_dict['type']))
+    
+    if use_3d_render:
+        from deps.visualizer.visualizer import plot_animated
+        for plot_data in collected_data:
+            plot_animated(phis=plot_data["phis"], thetas=plot_data["thetas"], l_arm=1.0, l_pendulum=1.0, frame_rate=50, save_as="test_movie")
+            return
 
 #########################
 # Misc helper functions #
@@ -425,10 +446,10 @@ def main():
             "activation": "relu"
         },
     ] # Confirmed: a2c, dqn, a2c_s, reinforce, ppo, 
-    envs_to_use = ["cartpole"] #["furuta_paper", "furuta_paper_norm"]
-    algorithms_to_use = ["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
-    architecture_to_use = ["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
-    seeds = [0, 10, 100, 1000]
+    envs_to_use = ["furuta_paper"] #["cartpole", "furuta_paper", "furuta_paper_norm"]
+    algorithms_to_use = ["ddpg"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
+    architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
+    seeds = [0] #[0, 10, 100] #[0, 10, 100, 1000]
 
     envs = get_dicts_in_list_matching_names(envs_to_use, all_environments)
     algorithms = get_dicts_in_list_matching_names(algorithms_to_use, all_algorithms)
@@ -454,7 +475,7 @@ def main():
                 annonuce_message("Now testing %s in environment %s with seeds %s" % (alg_name, env_dict['name'], seed))
                 for arch_dict in architectures:
                     heads_up_message("Using arch %s" % (arch_dict['name']))
-                    evaluate_algorithm(alg_dict, arch_dict, env_dict, seed)
+                    evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type=RENDER_TYPE)
 
     if do_plots:
         res_maker_dict = dict()

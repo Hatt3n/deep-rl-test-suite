@@ -150,38 +150,38 @@ def plot_animated(phis, thetas,
         _plot_polar_indicator(ax_polar_phi, phi, title="Arm Angle", color="blue")
         _plot_polar_indicator(ax_polar_theta, theta, title="Pendulum Angle", color="orange")
         # Keep last 4 seconds of parameters
-        i_lower = max(0, frame_idx - int(frame_rate)*4)
-        i_upper = frame_idx + 1
-        _plot_timeseries(ax_u,
-                         ts[i_lower:i_upper],
-                         us[i_lower:i_upper],
-                         ylim=(min(us), max(us)),
-                         title="Control input",
-                         color="black")
-        _plot_timeseries(ax_phi,
-                         ts[i_lower:i_upper],
-                         phis[i_lower:i_upper],
-                         ylim=(min(phis), max(phis)),
-                         title="Phi",
-                         color="blue")
-        _plot_timeseries(ax_theta,
-                         ts[i_lower:i_upper],
-                         thetas[i_lower:i_upper],
-                         ylim=(min(thetas), max(thetas)),
-                         title="Theta",
-                         color="orange")
-        _plot_timeseries(ax_dphidt,
-                         ts[i_lower:i_upper],
-                         dphis[i_lower:i_upper],
-                         ylim=(min(dphis), max(dphis)),
-                         title="dPhi/dt",
-                         color="red")
-        _plot_timeseries(ax_dthetadt,
-                         ts[i_lower:i_upper],
-                         dthetas[i_lower:i_upper],
-                         ylim=(min(dthetas), max(dthetas)),
-                         title="dTheta/dt",
-                         color="darkgreen")
+        # i_lower = max(0, frame_idx - int(frame_rate)*4)
+        # i_upper = frame_idx + 1
+        # _plot_timeseries(ax_u,
+        #                  ts[i_lower:i_upper],
+        #                  us[i_lower:i_upper],
+        #                  ylim=(min(us), max(us)),
+        #                  title="Control input",
+        #                  color="black")
+        # _plot_timeseries(ax_phi,
+        #                  ts[i_lower:i_upper],
+        #                  phis[i_lower:i_upper],
+        #                  ylim=(min(phis), max(phis)),
+        #                  title="Phi",
+        #                  color="blue")
+        # _plot_timeseries(ax_theta,
+        #                  ts[i_lower:i_upper],
+        #                  thetas[i_lower:i_upper],
+        #                  ylim=(min(thetas), max(thetas)),
+        #                  title="Theta",
+        #                  color="orange")
+        # _plot_timeseries(ax_dphidt,
+        #                  ts[i_lower:i_upper],
+        #                  dphis[i_lower:i_upper],
+        #                  ylim=(min(dphis), max(dphis)),
+        #                  title="dPhi/dt",
+        #                  color="red")
+        # _plot_timeseries(ax_dthetadt,
+        #                  ts[i_lower:i_upper],
+        #                  dthetas[i_lower:i_upper],
+        #                  ylim=(min(dthetas), max(dthetas)),
+        #                  title="dTheta/dt",
+        #                  color="darkgreen")
         ax3d.set_title(f"Furuta Pendulum visualization (t = {t:.2f} seconds)")
 
     ani = animation.FuncAnimation(

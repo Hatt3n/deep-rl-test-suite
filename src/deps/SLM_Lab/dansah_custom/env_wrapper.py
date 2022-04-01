@@ -12,7 +12,7 @@ import numpy as np
 
 
 class EnvWrapper():
-    def __init__(self, env_fn, spec):
+    def __init__(self, env_fn, spec, collect_data=False):
         self.env = env_fn()
 
         # Pass through
@@ -23,7 +23,9 @@ class EnvWrapper():
         self.is_discrete = self.env.is_discrete
         self.is_venv = False # Only one environment at a time
         self.total_reward = np.nan
-        self.to_render = util.in_eval_lab_mode()
+        self.to_render = util.in_eval_lab_mode() and not collect_data
+        if collect_data:
+            self.env.collect_data()
         
         # From base.py in src\deps\SLM_Lab\slm_lab\env
         self.env_spec = spec['env'][0]  # idx 0 for single-env
@@ -96,6 +98,12 @@ class EnvWrapper():
     
     def seed(self, seed):
         self.env.seed(seed)
+    
+    def get_data(self):
+        try:
+            return self.env.get_data()
+        except:
+            return None
 
     # Originally from openai.py in src\deps\SLM_Lab\slm_lab\env
     def reset(self):

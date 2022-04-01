@@ -12,7 +12,7 @@ from deps.SLM_Lab.slm_lab.lib import util
 import os
 
 def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, 
-        epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train',
+        epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train', collect_data=False,
         action_policy="epsilon_greedy", net=None):
     """
     mode: Should be 'train' or 'enjoy'.
@@ -118,11 +118,13 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
 
     set_global_seed(spec)
 
-    env = EnvWrapper(env_fn, spec)
+    env = EnvWrapper(env_fn, spec, collect_data=collect_data)
     a2c_agent = Agent(spec, Body(env, spec))
 
     #action = a2c_agent.act(np.array([1, 2, 3, 4, 5]))
     #print("Took action %s" % action)
 
     SLM_Trainer(a2c_agent, env, spec).run_rl(logger_kwargs=logger_kwargs)
+    collected_data = env.get_data()
     env.close()
+    return collected_data

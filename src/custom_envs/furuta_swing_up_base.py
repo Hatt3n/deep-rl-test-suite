@@ -10,7 +10,7 @@ https://mit-license.org/
 The latter was published under the 3-Clause BSD License:
 https://opensource.org/licenses/BSD-3-Clause
 
-Last edit: 2022-03-31
+Last edit: 2022-04-01
 By: dansah
 """
 
@@ -46,11 +46,13 @@ class FurutaPendulumEnv(gym.core.Env):
         self.DT = 0.02 # Time step size in seconds
 
         # The following parameters are from "A Reinforcement Learning Controller for the Swing-Up of the Furuta Pendulum" by D. Guida et al. (2020)
-        self.r = 0.025 # meters, radius of the arms
-        self.l = 0.5 # meters, half the length of the arms
+        self.r = 1.0 # meters, length of the horizontal arm
+        self.l = 0.5 # meters, half the length of the vertical arm
         self.m = 1.0 # kg, mass of the arms
 
         # Misc
+        self._collect_data = False
+        self._data = []
         self.viewer = None
         self.np_random = None # Not needed in modern versions of OpenAI Gym
 
@@ -63,6 +65,26 @@ class FurutaPendulumEnv(gym.core.Env):
             self.np_random, seed = seeding.np_random(seed)
         return np.array([seed])
 
+    def collect_data(self):
+        """
+        Enable data collection. This will save the thetas and phis.
+        """
+        self._collect_data = True
+
+    def get_data(self):
+        """
+        Returns the collected data (thetas and phis).
+        The data has the following format:
+        [
+            {
+                "phis": [phi1, ...],
+                "thetas": [theta1, ...],
+            },
+            ...
+        ]
+        """
+        return self._data
+
     def _internal_step(self, action):
         """
         Transitions the internal environment, without generating an
@@ -72,6 +94,10 @@ class FurutaPendulumEnv(gym.core.Env):
         if abs(torque) > self.MAX_TORQUE:
             print("Warning: Maximum Torque exceeded, received value of %d" % torque)
         self.internal_state["furuta_ode"].trans(torque, self.DT)
+        if self._collect_data:
+            new_state = self._get_internal_state()
+            self._data[-1]["phis"].append(new_state[3])
+            self._data[-1]["thetas"].append(new_state[0])
 
     def step(self, action):
         """
@@ -109,7 +135,11 @@ class FurutaPendulumEnv(gym.core.Env):
         self.internal_state["furuta_ode"].init(theta0=self.START_THETA, m=self.m, l=self.l, r=self.r)
         self.epinfo = {'r': np.float16(0), 'l': np.int16(0)}
 
-        return self._get_observed_state_from_internal(self._get_internal_state())
+        new_state = self._get_internal_state()
+        if self._collect_data:
+            self._data.append({"phis": [new_state[3]], "thetas": [new_state[0]]})
+
+        return self._get_observed_state_from_internal(new_state)
 
     def render(self, mode="human"):
         """
