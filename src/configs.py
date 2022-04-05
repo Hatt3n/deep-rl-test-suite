@@ -50,6 +50,10 @@ algo_env_configs = {
             "training_frequency": 1, # Value from SLM_Lab spec-file "reinforce_cartpole.json"
             "log_frequency": 400,
         },
+        "rs_mpc": {
+            "training_frequency": 32,
+            "log_frequency": 400,
+        },
     },
     "furuta_paper": {
         "a2c": {

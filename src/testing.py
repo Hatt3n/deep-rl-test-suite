@@ -5,11 +5,12 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-04-01
+Last edit: 2022-04-05
 By: dansah
 """
 
 from configs import ALGO_ENV_CONFIGS
+from deps.ipm_python.furuta import FurutaODE
 
 from deps.spinningup.dansah_custom import test_policy
 from deps.spinningup.dansah_custom import plot
@@ -61,7 +62,7 @@ WORK_DIR = pathlib.Path().resolve()
 ####################
 # Important values #
 ####################
-RENDER_TYPE = "3d"                              # Whether to use 3d-rendering for the Furuta environments or not.
+RENDER_TYPE = "def"                              # Whether to use 3d-rendering for the Furuta environments or not.
 
 #########################
 # Environment functions #
@@ -143,15 +144,16 @@ def make_env_r_disc():
 ######################
 # Training functions #
 ######################
-def create_ac_kwargs(mlp_architecture=[64,64], activation_func=tf.nn.relu, arch_dict=dict(), output_dir="", slm_type=False):
+def create_ac_kwargs(mlp_architecture=[64,64], activation_func=tf.nn.relu, arch_dict=dict(), env_dict=dict(), output_dir="", xtra_args=False):
     """
     Creates the ac_kwargs dictionary used by the algorithms (primarily the Spin Up ones).
-    If slm_type is True, some extra key-value pairs are added that SLM algorithms use.
+    If xtra_args is True, some extra key-value pairs are added that SLM algorithms use.
     """
     ac_kwargs = dict(hidden_sizes=mlp_architecture, activation=activation_func)
-    if slm_type:
+    if xtra_args:
         ac_kwargs['activation_name'] = arch_dict['activation']
         ac_kwargs['rel_output_dir'] = output_dir.replace(BASE_DIR, "")
+        ac_kwargs['env_name'] = env_dict['name']
     return ac_kwargs
 
 def train_algorithm(alg_dict, arch_dict, env_dict, seed=0):
@@ -163,8 +165,10 @@ def train_algorithm(alg_dict, arch_dict, env_dict, seed=0):
     output_dir = get_output_dir(alg_dict['name'], arch_dict['name'], env_dict['name'], seed)
 
     # Based on example from https://spinningup.openai.com/en/latest/user/running.html
-    ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation'], use_torch=(alg_dict['type'] != 'baselines')), 
-                                 arch_dict=arch_dict, output_dir=output_dir, slm_type=(alg_dict['type'] == 'slm'))
+    act_func = get_activation_by_name(arch_dict['activation'], use_torch=(alg_dict['type'] != 'baselines'))
+    add_xtra_args = alg_dict['type'] == 'slm' or alg_dict['type'] == 'rlil'
+    ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=act_func, arch_dict=arch_dict, env_dict=env_dict,
+                                 output_dir=output_dir, xtra_args=add_xtra_args)
     logger_kwargs = dict(output_dir=output_dir, exp_name='experiment_test0_' + output_dir, log_frequency=alg_dict['log_frequency'])
 
     algorithm_fn = alg_dict['alg_fn']
@@ -217,8 +221,8 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
         env.close()
     elif alg_dict['type'] == 'baselines':
         with tf.Graph().as_default():
-            model = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=create_ac_kwargs(arch_dict['layers'], get_activation_by_name(arch_dict['activation'], use_torch=False)), 
-                                    load_path=output_dir)
+            ac_kwargs = create_ac_kwargs(arch_dict['layers'], get_activation_by_name(arch_dict['activation'], use_torch=False))
+            model = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, load_path=output_dir)
             # Based on code from the file https://github.com/openai/baselines/blob/master/baselines/run.py
             from baselines import logger
             from baselines.common.vec_env.dummy_vec_env import VecEnv
@@ -255,7 +259,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             tf_util.get_session().close()
     elif alg_dict['type'] == 'slm':
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation'], use_torch=True), 
-                                     arch_dict=arch_dict, output_dir=output_dir, slm_type=True)
+                                     arch_dict=arch_dict, output_dir=output_dir, xtra_args=True)
         collected_data = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=max_ep_len, 
                                             min_env_interactions=2*max_ep_len, logger_kwargs=dict(), seed=0, mode='enjoy', collect_data=use_3d_render)
     else:
@@ -349,6 +353,7 @@ def main():
     from deps.SLM_Lab.dansah_custom.a2c import a2c as a2c_s
     from deps.SLM_Lab.dansah_custom.reinforce import reinforce
     from deps.SLM_Lab.dansah_custom.dqn import dqn
+    from deps.pytorch_rl_il.dansah_custom.rs_mpc_launcher import rs_mpc
     all_environments = [
         {
             "name": "furuta_paper",
@@ -418,6 +423,12 @@ def main():
             "continuous": True,
             "type": "slm",
         },
+        {
+            "name": "rs_mpc",
+            "alg_fn": rs_mpc,
+            "continuous": True,
+            "type": "rlil",
+        }
     ]
     all_architectures = [
         {
@@ -446,8 +457,8 @@ def main():
             "activation": "relu"
         },
     ] # Confirmed: a2c, dqn, a2c_s, reinforce, ppo, 
-    envs_to_use = ["furuta_paper"] #["cartpole", "furuta_paper", "furuta_paper_norm"]
-    algorithms_to_use = ["ddpg"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
+    envs_to_use = ["cartpole"] #["cartpole", "furuta_paper", "furuta_paper_norm"]
+    algorithms_to_use = ["rs_mpc"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
     architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
     seeds = [0] #[0, 10, 100] #[0, 10, 100, 1000]
 
