@@ -1,6 +1,5 @@
 # Custom
 src/deps/ipm_python
-src/deps/nn_dynamics
 tmp/
 out*/
 data/
