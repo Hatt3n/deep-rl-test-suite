@@ -10,7 +10,6 @@ By: dansah
 """
 
 from configs import ALGO_ENV_CONFIGS
-from deps.ipm_python.furuta import FurutaODE
 
 from deps.spinningup.dansah_custom import test_policy
 from deps.spinningup.dansah_custom import plot
@@ -50,7 +49,7 @@ import os
 #########################
 do_training = False
 do_policy_test = True
-do_plots = True
+do_plots = False
 
 #######################
 # Training parameters #
@@ -259,9 +258,15 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             tf_util.get_session().close()
     elif alg_dict['type'] == 'slm':
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation'], use_torch=True), 
-                                     arch_dict=arch_dict, output_dir=output_dir, xtra_args=True)
+                                     arch_dict=arch_dict, env_dict=env_dict, output_dir=output_dir, xtra_args=True)
         collected_data = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=max_ep_len, 
                                             min_env_interactions=2*max_ep_len, logger_kwargs=dict(), seed=0, mode='enjoy', collect_data=use_3d_render)
+    elif alg_dict['type'] == 'rlil':
+        from deps.pytorch_rl_il.dansah_custom.watch_continuous import evaluate_algorithm
+        act_func = get_activation_by_name(arch_dict['activation'], use_torch=True)
+        ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=act_func, arch_dict=arch_dict, env_dict=env_dict,
+                                     output_dir=output_dir, xtra_args=True)
+        collected_data = evaluate_algorithm(env_fn, ac_kwargs=ac_kwargs, min_env_interactions=2*max_ep_len, seed=0, collect_data=use_3d_render)
     else:
         raise NotImplementedError("No handler for algorithm type %s" % (alg_dict['type']))
     

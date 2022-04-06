@@ -1,4 +1,5 @@
 """
+Creates and trains an RS MPC agent.
 
 Modified by @dansah
 """
@@ -12,7 +13,7 @@ import torch
 import logging
 import ray
 import deps.pytorch_rl_il.dansah_custom.rs_mpc_preset as continuous
-import os
+from .util import get_log_dir
 
 
 def rs_mpc(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=128, 
@@ -73,5 +74,5 @@ def rs_mpc(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=128,
         min_env_interactions=args['min_env_interactions'],
         args_dict=args_dict,
         seed=args['seed'],
-        log_dir=os.path.join('.', 'out', '%sdata' % ac_kwargs['rel_output_dir'])
+        log_dir=get_log_dir(ac_kwargs['rel_output_dir'])
     )

@@ -1,3 +1,9 @@
+"""
+Defines the RS MPC agent.
+
+Modified by @dansah
+"""
+
 import torch
 from torch.distributions.uniform import Uniform
 from torch.nn.functional import mse_loss

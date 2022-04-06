@@ -1,3 +1,10 @@
+"""
+Generates/samples data from an environment by interacting
+with it.
+
+Modified by @dansah
+"""
+
 import ray
 import numpy as np
 import os

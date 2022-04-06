@@ -1,3 +1,9 @@
+"""
+Configures and fetches global parameters.
+
+Modified by @dansah
+"""
+
 import os
 import numpy as np
 import torch

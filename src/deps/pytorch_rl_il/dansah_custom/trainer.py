@@ -1,4 +1,5 @@
 """
+Trains an agent.
 
 Modified by @dansah
 """

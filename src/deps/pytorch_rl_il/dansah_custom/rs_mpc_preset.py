@@ -1,3 +1,9 @@
+"""
+Creates an RS MPC agent, with default parameters (by default).
+
+Modified by @dansah
+"""
+
 from torch.optim import Adam
 from .rs_mpc import RsMPC
 from .initializer import (get_device,

@@ -1,4 +1,5 @@
 """
+Creates and trains an agent.
 
 Modified by @dansah
 """

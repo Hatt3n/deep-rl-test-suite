@@ -1,3 +1,10 @@
+"""
+Defines reward functions for the environments. These are used (required)
+by RS MPC agents.
+
+Modified by @dansah
+"""
+
 import torch
 import math
 import numpy as np

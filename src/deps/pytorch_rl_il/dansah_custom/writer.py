@@ -1,3 +1,9 @@
+"""
+Stores logging information.
+
+Modified by @dansah
+"""
+
 import csv
 import os
 import subprocess

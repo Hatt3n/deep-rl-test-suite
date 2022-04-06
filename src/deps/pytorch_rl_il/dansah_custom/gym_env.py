@@ -1,3 +1,9 @@
+"""
+Custom Open AI Gym wrapper.
+
+Modified by @dansah
+"""
+
 from deps.pytorch_rl_il.rlil.environments.action import Action
 from deps.pytorch_rl_il.rlil.environments.state import State
 from deps.pytorch_rl_il.rlil.environments.base import Environment
@@ -18,7 +24,8 @@ class GymEnvironment(Environment):
                  env,
                  name,
                  device=torch.device("cpu"),
-                 append_time=False):
+                 append_time=False,
+                 collect_data=False):
 
         self.device = device
         self._name = name
@@ -45,6 +52,9 @@ class GymEnvironment(Environment):
         # set action_space
         Action.set_action_space(env.action_space)
         self.is_discrete = env.is_discrete
+
+        if collect_data:
+            self._env.collect_data()
 
     def set_append_time(self, append_time):
         self._append_time = append_time
@@ -132,6 +142,12 @@ class GymEnvironment(Environment):
     @property
     def env(self):
         return self._env
+    
+    def get_data(self):
+        try:
+            return self._env.get_data()
+        except:
+            return None
 
     def _lazy_init(self):
         if not self._init:
