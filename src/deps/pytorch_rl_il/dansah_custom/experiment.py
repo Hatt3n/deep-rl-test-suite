@@ -9,7 +9,7 @@ import numpy as np
 from .writer import ExperimentWriter
 from .initializer import get_logger, set_writer, set_logger, set_seed
 from deps.pytorch_rl_il.dansah_custom.asyncsampler import AsyncSampler
-from .trainer import Trainer
+from .trainer_seq import TrainerSeq
 import os
 import logging
 import json
@@ -30,6 +30,7 @@ class Experiment:
             min_env_interactions=np.inf,
             max_sample_episodes=np.inf,
             max_train_steps=np.inf,
+            logger_kwargs=dict(),
             log_dir=None
     ):
         # set_seed
@@ -66,19 +67,18 @@ class Experiment:
         # start training
         agent = agent_fn(env)
 
-        sampler = AsyncSampler(env, num_workers=num_workers) \
-            if num_workers > 0 else None
         eval_sampler = AsyncSampler(env, num_workers=num_workers_eval) \
             if num_workers_eval > 0 else None
 
-        trainer = Trainer(
+        trainer = TrainerSeq(
             agent=agent,
-            sampler=sampler,
+            env=env,
             eval_sampler=eval_sampler,
             steps_per_epoch=steps_per_epoch,
             min_env_interactions=min_env_interactions,
             max_sample_episodes=max_sample_episodes,
             max_train_steps=max_train_steps,
+            logger_kwargs=logger_kwargs
         )
 
         trainer.start_training()
