@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-04-05
+Last edit: 2022-04-06
 By: dansah
 """
 
@@ -54,7 +54,7 @@ do_plots = False
 #######################
 # Training parameters #
 #######################
-MIN_ENV_INTERACTIONS = 10000                    # The minimum number of interactions the agents should perform before stopping training.
+MIN_ENV_INTERACTIONS = 20000                    # The minimum number of interactions the agents should perform before stopping training.
 BASE_DIR = os.path.join('.', 'out%s' % os.sep)  # The base directory for storing the output of the algorithms.
 WORK_DIR = pathlib.Path().resolve()
 
@@ -266,7 +266,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
         act_func = get_activation_by_name(arch_dict['activation'], use_torch=True)
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=act_func, arch_dict=arch_dict, env_dict=env_dict,
                                      output_dir=output_dir, xtra_args=True)
-        collected_data = evaluate_algorithm(env_fn, ac_kwargs=ac_kwargs, min_env_interactions=2*max_ep_len, seed=0, collect_data=use_3d_render)
+        collected_data = evaluate_algorithm(env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, min_env_interactions=2*max_ep_len, seed=0, collect_data=use_3d_render)
     else:
         raise NotImplementedError("No handler for algorithm type %s" % (alg_dict['type']))
     

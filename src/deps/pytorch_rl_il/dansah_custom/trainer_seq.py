@@ -40,18 +40,19 @@ class TrainerSeq:
             self,
             agent,
             env,
-            sample=True,
             eval_sampler=None,
+            eval_freq=10, # In episodes
             steps_per_epoch=128,
             min_env_interactions=np.inf,
             max_sample_episodes=np.inf,
             max_train_steps=np.inf,
-            logger_kwargs=dict()
+            logger_kwargs=dict(),
+            show_org_training_msgs=False
     ):
         self._agent = agent
         self._env = env
-        self._sample = sample
         self._eval_sampler = eval_sampler
+        self._eval_freq = eval_freq
         self._steps_per_epoch = steps_per_epoch
         self._max_sample_frames = min_env_interactions # TODO: Rename
         self._max_sample_episodes = max_sample_episodes
@@ -64,6 +65,7 @@ class TrainerSeq:
         call_seed()
         self._epoch = 0
         self._logger_kwargs = logger_kwargs
+        self._show_org_training_msgs = show_org_training_msgs
 
     def start_training(self):
         self._sp_logger = EpochLogger(**self._logger_kwargs)
@@ -78,68 +80,66 @@ class TrainerSeq:
             train_steps = self._writer.train_steps
 
             # sampling for training
-            if self._sample:
-                lazy_agent = self._agent.make_lazy_agent()
-                start_info=self._get_current_info()
-                worker_episodes=1
-                
-                sample_info = {"frames": [], "returns": []}
-                lazy_agent.set_replay_buffer(self._env)
+            lazy_agent = self._agent.make_lazy_agent()
+            start_info=self._get_current_info()
+            worker_episodes=1
+            
+            sample_info = {"frames": [], "returns": []}
+            lazy_agent.set_replay_buffer(self._env)
 
-                # Sample until it reaches worker_frames or worker_episodes.
-                while len(sample_info["frames"]) < worker_episodes: #and sum(sample_info["frames"]) < worker_frames 
-                    self._env.reset()
+            # Sample until it reaches worker_frames or worker_episodes.
+            while len(sample_info["frames"]) < worker_episodes: #and sum(sample_info["frames"]) < worker_frames 
+                self._env.reset()
+                action = lazy_agent.act(self._env.state, self._env.reward)
+                _return = 0
+                _frames = 0
+
+                while not self._env.done: # TODO: Enforce max_ep_len, should be done in wrapper.
+                    self._env.step(action)
                     action = lazy_agent.act(self._env.state, self._env.reward)
-                    _return = 0
-                    _frames = 0
+                    _frames += 1
+                    _return += self._env.reward.item()
 
-                    while not self._env.done: # TODO: Enforce max_ep_len, should be done in wrapper.
-                        self._env.step(action)
-                        action = lazy_agent.act(self._env.state, self._env.reward)
-                        _frames += 1
-                        _return += self._env.reward.item()
+                    # TODO: Move training to here. (?)
 
-                        # TODO: Move training to here.
+                    # Perform logging if appropriate
+                    real_curr_t = self._writer.sample_frames + _frames
+                    if real_curr_t % self._sp_logger.log_frequency == 0 and self._epoch != 0:
+                        self._sp_log(real_curr_t)
 
-                        # Perform logging if appropriate
-                        real_curr_t = self._writer.sample_frames + _frames
-                        if real_curr_t % self._sp_logger.log_frequency == 0:
-                            self._sp_log(real_curr_t)
+                # Episode over
+                self._at_least_one_done = True
+                self._sp_logger.store(EpRet=_return, EpLen=_frames)
+                lazy_agent.replay_buffer.on_episode_end()
+                sample_info["frames"].append(_frames)
+                sample_info["returns"].append(_return)
 
-                    # Episode over
-                    self._at_least_one_done = True
-                    self._sp_logger.store(EpRet=_return, EpLen=_frames)
-                    lazy_agent.replay_buffer.on_episode_end()
-                    sample_info["frames"].append(_frames)
-                    sample_info["returns"].append(_return)
+            samples = lazy_agent.replay_buffer.get_all_transitions()
+            samples.weights = lazy_agent.compute_priorities(samples)
+            self._replay_buffer.store(samples, priorities=samples.weights)
 
-                samples = lazy_agent.replay_buffer.get_all_transitions()
-                samples.weights = lazy_agent.compute_priorities(samples)
-                self._replay_buffer.store(samples, priorities=samples.weights)
+            self._writer.sample_frames += sum(sample_info["frames"])
+            self._writer.sample_episodes += len(sample_info["frames"])
 
-                self._writer.sample_frames += sum(sample_info["frames"])
-                self._writer.sample_episodes += len(sample_info["frames"])
+            # training proportional to number of env interactions
+            new_epoch = self._writer.sample_frames // self._steps_per_epoch
+            if new_epoch > self._epoch:
+                num_trains = new_epoch - self._epoch
+                for _ in range(num_trains):
+                    if not is_on_policy_mode():
+                        self._agent.train()
+                self._epoch = self._writer.train_steps
 
-                # training proportional to number of env interactions
-                new_epoch = self._writer.sample_frames // self._steps_per_epoch
-                if new_epoch > self._epoch:
-                    num_trains = new_epoch - self._epoch
-                    for _ in range(num_trains):
-                        if not is_on_policy_mode():
-                            self._agent.train()
-                    self._epoch = new_epoch
-            else:
-                self._agent.train()
+            if self._show_org_training_msgs:
+                training_msg = {
+                    "training time [sec]": round(time.time() - iter_start_time, 2),
+                    "trained steps": self._writer.train_steps - train_steps,
+                    "epoch:": self._epoch}
+                self._logger.info("\nTraining:\n" +
+                                json.dumps(training_msg, indent=2))
 
-            training_msg = {
-                "training time [sec]": round(time.time() - iter_start_time, 2),
-                "trained steps": self._writer.train_steps - train_steps,
-                "epoch:": self._epoch}
-            self._logger.info("\nTraining:\n" +
-                              json.dumps(training_msg, indent=2))
-
-            # evaluation
-            if self._eval_sampler is not None:
+            # Evaluation
+            if self._eval_sampler is not None and self._writer.sample_episodes % self._eval_freq == 0:
                 eval_lazy_agent = self._agent.make_lazy_agent(
                     evaluation=True, store_samples=False)
                 self._eval_sampler.start_sampling(

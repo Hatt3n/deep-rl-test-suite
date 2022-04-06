@@ -37,7 +37,6 @@ def rs_mpc(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=128,
         "device": "cpu",
         "seed": seed,
         "agent": "rs_mpc",
-        "num_workers": 1,
         "min_env_interactions": min_env_interactions,
     }
 
@@ -53,7 +52,7 @@ def rs_mpc(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=128,
     #    env_id = ENVS[args.env]
     #else:
     env_name = ac_kwargs['env_name']
-    env = GymEnvironment(env_fn, env_name, append_time=False)
+    env = GymEnvironment(env_fn, env_name, max_ep_len, append_time=False)
 
     # set agent
     agent_name = args['agent']
@@ -69,7 +68,6 @@ def rs_mpc(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=128,
     Experiment(
         agent_fn, 
         env,
-        num_workers=args['num_workers'],
         steps_per_epoch=steps_per_epoch,
         min_env_interactions=args['min_env_interactions'],
         args_dict=args_dict,

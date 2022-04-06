@@ -23,6 +23,7 @@ class GymEnvironment(Environment):
     def __init__(self,
                  env,
                  name,
+                 max_ep_len,
                  device=torch.device("cpu"),
                  append_time=False,
                  collect_data=False):
@@ -36,6 +37,7 @@ class GymEnvironment(Environment):
             self._env_fn = env
             env = self._env_fn()
         self._env = env
+        self._max_ep_len = max_ep_len
         self._state: State = None
         self._action: Action = None
         self._reward = None
@@ -82,6 +84,7 @@ class GymEnvironment(Environment):
         self._reward = torch.tensor([0], dtype=torch.float32,
                                     device=self.device)
         self._done = False
+        self._c_step = 0
         return self._state
 
     def step(self, action):
@@ -93,7 +96,8 @@ class GymEnvironment(Environment):
         self._state = self._make_state(state, done, info)
         self._action = action
         self._reward = self._convert_reward(reward)
-        self._done = done
+        self._c_step += 1
+        self._done = done or self._c_step >= self._max_ep_len
         return self._state, self._reward
 
     def render(self, **kwargs):
@@ -108,6 +112,7 @@ class GymEnvironment(Environment):
     def duplicate(self):
         return GymEnvironment(self._name if self._env_fn is None else self._env_fn,
                               self._name,
+                              self._max_ep_len,
                               device=self.device,
                               append_time=self._append_time)
 

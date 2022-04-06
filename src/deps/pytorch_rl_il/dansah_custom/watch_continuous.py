@@ -10,14 +10,14 @@ from .gym_env import GymEnvironment
 import deps.pytorch_rl_il.dansah_custom.rs_mpc_preset as continuous
 from .util import get_log_dir
 
-def evaluate_algorithm(env_fn, ac_kwargs=dict(), min_env_interactions=1000, seed=0, fps=None, collect_data=False):
+def evaluate_algorithm(env_fn, ac_kwargs, max_ep_len, min_env_interactions=1000, seed=0, fps=None, collect_data=False):
     """
     Evaluates the trained rs_mpc agent specified by the output directory parameter,
     on the given environment.
     """
     # Load environment
     env_name = ac_kwargs['env_name']
-    env = GymEnvironment(env_fn, env_name, append_time=False)
+    env = GymEnvironment(env_fn, env_name, max_ep_len, append_time=False)
     env.seed(seed)
 
     # Load agent

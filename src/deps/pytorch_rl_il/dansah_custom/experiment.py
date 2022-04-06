@@ -24,7 +24,6 @@ class Experiment:
             args_dict={},
             exp_info="default_experiments",
             seed=0,
-            num_workers=1,
             num_workers_eval=1,
             steps_per_epoch=128,
             min_env_interactions=np.inf,
@@ -45,8 +44,6 @@ class Experiment:
         message += "  \n# Parameters:  \n"
         message += json.dumps(args_dict, indent=4,
                               sort_keys=True).replace("\n", "  \n")
-
-        # write git diff <- Removed
 
         writer.add_text("exp_summary", message)
         set_writer(writer)
