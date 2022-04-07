@@ -136,6 +136,14 @@ class RsMPC(Agent):
             self._num_samples,
             self.should_train(),
             *args, **kwargs)
+    
+    def save(self):
+        """
+        Forces the model to be saved. Relastically, this should only be 
+        called at the end of training, since the model is saved automatically
+        when .reinforce() is called (according to a pre-defined frequency).
+        """
+        self.dynamics._checkpointer(enforce=True)
 
     def load(self, dirname):
         for filename in os.listdir(dirname):

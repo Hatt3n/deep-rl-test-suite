@@ -2,7 +2,7 @@ import os
 import torch
 from torch.nn import utils
 from .target import TrivialTarget
-from .checkpointer import PeriodicCheckpointer
+from deps.pytorch_rl_il.dansah_custom.checkpointer import PeriodicCheckpointer
 from deps.pytorch_rl_il.dansah_custom.initializer import get_writer
 
 DEFAULT_CHECKPOINT_FREQUENCY = 200

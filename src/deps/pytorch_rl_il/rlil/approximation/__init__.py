@@ -6,7 +6,7 @@ from .v_network import VNetwork
 from .bcq_auto_encoder import BcqEncoder, BcqDecoder
 from .discriminator import Discriminator
 from .target import TargetNetwork, FixedTarget, PolyakTarget, TrivialTarget
-from .checkpointer import Checkpointer, DummyCheckpointer, PeriodicCheckpointer
+from deps.pytorch_rl_il.dansah_custom.checkpointer import Checkpointer, DummyCheckpointer, PeriodicCheckpointer
 from .feature_network import FeatureNetwork
 from .dynamics import Dynamics
 

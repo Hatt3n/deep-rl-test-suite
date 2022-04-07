@@ -140,6 +140,9 @@ class TrainerSeq:
             # Evaluation
             if self._eval_env is not None and self._writer.sample_episodes % self._eval_freq == 0:
                 self._perform_eval()
+        
+        # End of training. Save manually.
+        self._agent.save()
             
     def _perform_eval(self):
         eval_lazy_agent = self._agent.make_lazy_agent(evaluation=True, store_samples=False) # The samples from eval. are NOT stored.
