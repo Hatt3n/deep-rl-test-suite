@@ -24,7 +24,6 @@ class Experiment:
             args_dict={},
             exp_info="default_experiments",
             seed=0,
-            num_workers_eval=1,
             steps_per_epoch=128,
             min_env_interactions=np.inf,
             max_sample_episodes=np.inf,
@@ -34,6 +33,8 @@ class Experiment:
     ):
         # set_seed
         set_seed(seed)
+        eval_env = env.duplicate()
+        eval_env.seed(seed)
 
         # set writer
         assert log_dir is not None
@@ -64,13 +65,10 @@ class Experiment:
         # start training
         agent = agent_fn(env)
 
-        eval_sampler = AsyncSampler(env, num_workers=num_workers_eval) \
-            if num_workers_eval > 0 else None
-
         trainer = TrainerSeq(
             agent=agent,
             env=env,
-            eval_sampler=eval_sampler,
+            eval_env=eval_env,
             steps_per_epoch=steps_per_epoch,
             min_env_interactions=min_env_interactions,
             max_sample_episodes=max_sample_episodes,

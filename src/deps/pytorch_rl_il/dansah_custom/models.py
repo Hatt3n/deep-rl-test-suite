@@ -133,18 +133,24 @@ def fc_reward(env, hidden1=400, hidden2=300):
     )
 
 
-def fc_dynamics(env, hidden1=500, hidden2=500):
+def fc_dynamics(env, hidden_sizes, activation):
+    """
+    hidden_sizes ([int]) : List of the number of nodes in each layer.
+    activation (func) : A PyTorch activation function to use between the layers.
+    """
+
+    assert len(hidden_sizes) >= 1, 'hidden_sizes must contain at least 1 value'
     
     if env.is_discrete:
         action_space_dim = 1
     else:
         action_space_dim = env.action_space.shape[0]
+    
+    layers = [nn.Linear(env.state_space.shape[0] + action_space_dim, hidden_sizes[0]),
+              activation()]
+    for i in range(1, len(hidden_sizes)):
+        layers.append(nn.Linear(hidden_sizes[i-1], hidden_sizes[i]))
+        layers.append(activation())
+    layers.append(nn.Linear(hidden_sizes[-1], env.state_space.shape[0]))
 
-    return nn.Sequential(
-        nn.Linear(env.state_space.shape[0] +
-                  action_space_dim, hidden1),
-        nn.LeakyReLU(),
-        nn.Linear(hidden1, hidden2),
-        nn.LeakyReLU(),
-        nn.Linear(hidden2, env.state_space.shape[0]),
-    )
+    return nn.Sequential(*layers)

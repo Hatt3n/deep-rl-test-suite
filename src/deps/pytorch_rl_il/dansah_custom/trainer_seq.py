@@ -40,7 +40,7 @@ class TrainerSeq:
             self,
             agent,
             env,
-            eval_sampler=None,
+            eval_env=None,
             eval_freq=10, # In episodes
             steps_per_epoch=128,
             min_env_interactions=np.inf,
@@ -51,7 +51,7 @@ class TrainerSeq:
     ):
         self._agent = agent
         self._env = env
-        self._eval_sampler = eval_sampler
+        self._eval_env = eval_env
         self._eval_freq = eval_freq
         self._steps_per_epoch = steps_per_epoch
         self._max_sample_frames = min_env_interactions # TODO: Rename
@@ -81,7 +81,6 @@ class TrainerSeq:
 
             # sampling for training
             lazy_agent = self._agent.make_lazy_agent()
-            start_info=self._get_current_info()
             worker_episodes=1
             
             sample_info = {"frames": [], "returns": []}
@@ -139,19 +138,35 @@ class TrainerSeq:
                                 json.dumps(training_msg, indent=2))
 
             # Evaluation
-            if self._eval_sampler is not None and self._writer.sample_episodes % self._eval_freq == 0:
-                eval_lazy_agent = self._agent.make_lazy_agent(
-                    evaluation=True, store_samples=False)
-                self._eval_sampler.start_sampling(
-                    eval_lazy_agent,
-                    start_info=self._get_current_info(),
-                    worker_episodes=10)
-                eval_sample_result = self._eval_sampler.store_samples(
-                    timeout=1e-5, evaluation=True)
-
-                for start_info, sample_info in eval_sample_result.items():
-                    self._log(start_info, sample_info)
+            if self._eval_env is not None and self._writer.sample_episodes % self._eval_freq == 0:
+                self._perform_eval()
             
+    def _perform_eval(self):
+        eval_lazy_agent = self._agent.make_lazy_agent(evaluation=True, store_samples=False) # The samples from eval. are NOT stored.
+        worker_episodes=10
+        sample_info = {"frames": [], "returns": []}
+        eval_lazy_agent.set_replay_buffer(self._eval_env)
+
+        # Sample until it reaches worker_frames or worker_episodes.
+        while len(sample_info["frames"]) < worker_episodes:
+
+            self._eval_env.reset()
+            action = eval_lazy_agent.act(self._eval_env.state, self._eval_env.reward)
+            _return = 0
+            _frames = 0
+
+            while not self._eval_env.done:
+                self._eval_env.step(action)
+                action = eval_lazy_agent.act(self._eval_env.state, self._eval_env.reward)
+                _frames += 1
+                _return += self._eval_env.reward.item()
+
+            # Eval. episode over
+            #self._sp_logger.store(TestEpRet=_return, TestEpLen=_frames)
+            sample_info["frames"].append(_frames)
+            sample_info["returns"].append(_return)
+
+        self._log(self._get_current_info(), sample_info)
 
     
     def _sp_log(self, real_curr_t):

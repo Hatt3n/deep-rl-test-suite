@@ -7,8 +7,8 @@ Modified by @dansah
 
 import time
 from .gym_env import GymEnvironment
-import deps.pytorch_rl_il.dansah_custom.rs_mpc_preset as continuous
-from .util import get_log_dir
+from deps.pytorch_rl_il.dansah_custom.rs_mpc_launcher import rs_mpc_preset
+from .util import get_log_dir, load_buffer_args
 
 def evaluate_algorithm(env_fn, ac_kwargs, max_ep_len, min_env_interactions=1000, seed=0, fps=None, collect_data=False):
     """
@@ -21,9 +21,11 @@ def evaluate_algorithm(env_fn, ac_kwargs, max_ep_len, min_env_interactions=1000,
     env.seed(seed)
 
     # Load agent
-    agent_fn = getattr(continuous, "rs_mpc")()
+    log_dir = get_log_dir(ac_kwargs['rel_output_dir'])
+    loaded_buffer_args = load_buffer_args(log_dir)
+    agent_fn = rs_mpc_preset(**loaded_buffer_args)
     agent = agent_fn(env)
-    agent.load(get_log_dir(ac_kwargs['rel_output_dir']))
+    agent.load(log_dir)
 
     # Evaluate
     watch(agent, env, min_env_interactions, fps=fps, collect_data=collect_data, eval=True)
