@@ -23,7 +23,8 @@ from . import REWARDS
 
 def rs_mpc(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=128, 
            min_env_interactions=int(1e5), logger_kwargs=dict(), seed=0,
-           horizon=20, num_samples=1000, minibatch_size=100, replay_start_size=5000, replay_buffer_size=1e7):
+           horizon=20, num_samples=1000, minibatch_size=100, replay_start_size=5000, replay_buffer_size=1e7,
+           perform_eval=True):
 
     args = {
         "device": "cuda" if torch.cuda.is_available() else "cpu",
@@ -74,6 +75,7 @@ def rs_mpc(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=128,
         min_env_interactions=args['min_env_interactions'],
         args_dict=args_dict,
         seed=args['seed'],
+        perform_eval=perform_eval,
         logger_kwargs=logger_kwargs,
         log_dir=log_dir
     )

@@ -28,13 +28,16 @@ class Experiment:
             min_env_interactions=np.inf,
             max_sample_episodes=np.inf,
             max_train_steps=np.inf,
+            perform_eval=True,
             logger_kwargs=dict(),
             log_dir=None
     ):
         # set_seed
         set_seed(seed)
-        eval_env = env.duplicate()
-        eval_env.seed(seed)
+        eval_env = None
+        if perform_eval:
+            eval_env = env.duplicate()
+            eval_env.seed(seed)
 
         # set writer
         assert log_dir is not None

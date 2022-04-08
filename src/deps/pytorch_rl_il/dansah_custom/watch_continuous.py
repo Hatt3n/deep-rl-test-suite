@@ -14,6 +14,7 @@ def evaluate_algorithm(env_fn, ac_kwargs, max_ep_len, min_env_interactions=1000,
     """
     Evaluates the trained rs_mpc agent specified by the output directory parameter,
     on the given environment.
+    NOTE: The seed is only applied to the environment, not the agent.
     """
     # Load environment
     env_name = ac_kwargs['env_name']

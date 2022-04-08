@@ -54,7 +54,7 @@ do_plots = False
 #######################
 # Training parameters #
 #######################
-MIN_ENV_INTERACTIONS = 20000                    # The minimum number of interactions the agents should perform before stopping training.
+MIN_ENV_INTERACTIONS = 40000                    # The minimum number of interactions the agents should perform before stopping training.
 BASE_DIR = os.path.join('.', 'out%s' % os.sep)  # The base directory for storing the output of the algorithms.
 WORK_DIR = pathlib.Path().resolve()
 
@@ -112,6 +112,23 @@ def make_env_obs():
     """
     from custom_envs.furuta_swing_up_paper_obs import FurutaPendulumEnvPaperObs
     return FurutaPendulumEnvPaperObs()
+
+def make_env_mix():
+    """
+    Creates a new Furuta Pendulum Mix environment (swing-up),
+    where the observed state includes theta,
+    and early termination is used.
+    """
+    from custom_envs.furuta_swing_up_mix import FurutaPendulumEnvPaperMix
+    return FurutaPendulumEnvPaperMix()
+
+def make_env_mix_disc():
+    """
+    Creates a new Furuta Pendulum Mix environment (swing-up),
+    where the action space is discrete.
+    """
+    from custom_envs.env_util import DiscretizingEnvironmentWrapper
+    return DiscretizingEnvironmentWrapper(make_env_mix)    
 
 def make_env_disc():
     """
@@ -381,6 +398,12 @@ def main():
             "max_ep_len": 501,
         },
         {
+            "name": "furuta_paper_mix",
+            "env_fn": make_env_mix,
+            "env_fn_disc": make_env_mix_disc,
+            "max_ep_len": 501,
+        },
+        {
             "name": "furuta_paper_r",
             "env_fn": make_env_r,
             "env_fn_disc": make_env_r_disc,
@@ -476,7 +499,7 @@ def main():
             "activation": "relu"
         },
     ] # Confirmed: a2c, dqn, a2c_s, reinforce, ppo, 
-    envs_to_use = ["furuta_paper_obs"] #["cartpole", "furuta_paper", "furuta_paper_norm"]
+    envs_to_use = ["furuta_paper_mix"] #["cartpole", "furuta_paper", "furuta_paper_norm"]
     algorithms_to_use = ["rs_mpc"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
     architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
     seeds = [0] #[0, 10, 100] #[0, 10, 100, 1000]

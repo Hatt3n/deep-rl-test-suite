@@ -6,4 +6,5 @@ REWARDS = {
     "MountainCarContinuous-v0": MountainCarContinuousReward,
     "cartpole": CartpoleReward,
     "furuta_paper_obs": FurutaPaperObsReward,
+    "furuta_paper_mix": FurutaPaperMixReward,
 }

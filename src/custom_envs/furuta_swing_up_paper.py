@@ -68,12 +68,13 @@ class FurutaPendulumEnvPaper(custom_envs.furuta_swing_up_base.FurutaPendulumEnv)
         dthetadt = internal_state[1]
         phi = internal_state[3]
 
+        terminal = self._terminal_reached()
+
         # In the paper, theta_2 (here: theta) is 0 when the arm is hanging down vertically, and positive when rotating counter-clockwise.
         # Similarily, theta_1 (here: phi) is positive when rotating counter-clockwise.
         reward = self._calc_reward(theta_1=phi, theta_2=(theta - np.pi), dot_theta_2=dthetadt, tau_c=torque)
 
         observed_state = self._get_observed_state_from_internal(internal_state)
-        terminal = self._terminal_reached()
 
         # Add information needed for Baselines (at least A2C) and SLM Lab.
         self.epinfo['r'] += reward

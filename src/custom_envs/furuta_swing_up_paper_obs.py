@@ -40,4 +40,4 @@ class FurutaPendulumEnvPaperObs(FurutaPendulumEnvPaper):
         information for the MB-MF agent to approximate the reward of predicted
         trajectories. This observed state, however, does.
         """
-        return np.array([internal_state[3], internal_state[2], internal_state[0], internal_state[1]])
+        return np.array([internal_state[3], internal_state[2], internal_state[0] - np.pi, internal_state[1]])

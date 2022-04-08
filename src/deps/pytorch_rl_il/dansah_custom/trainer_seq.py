@@ -41,7 +41,7 @@ class TrainerSeq:
             agent,
             env,
             eval_env=None,
-            eval_freq=10, # In episodes
+            eval_freq=20, # In episodes (treated as a minimum)
             steps_per_epoch=128,
             min_env_interactions=np.inf,
             max_sample_episodes=np.inf,
@@ -61,18 +61,20 @@ class TrainerSeq:
         self._writer = get_writer()
         self._logger = get_logger()
         self._best_returns = -np.inf
-        self._timeout = -1  # if -1, store_samples waits for worker.sample()
         call_seed()
         self._epoch = 0
         self._logger_kwargs = logger_kwargs
         self._show_org_training_msgs = show_org_training_msgs
 
     def start_training(self):
+        # Set-up logging
         self._sp_logger = EpochLogger(**self._logger_kwargs)
         self._latest_epoch = self._epoch
         self._at_least_one_done = False
         self._train_start_time = time.time()
         self._replay_buffer = get_replay_buffer()
+
+        last_eval_train_steps = self._writer.train_steps
 
         while not self._done():
             # training
@@ -138,7 +140,10 @@ class TrainerSeq:
                                 json.dumps(training_msg, indent=2))
 
             # Evaluation
-            if self._eval_env is not None and self._writer.sample_episodes % self._eval_freq == 0:
+            if self._eval_env is not None and \
+               self._writer.sample_episodes % self._eval_freq == 0 and last_eval_train_steps != self._writer.train_steps:
+
+                last_eval_train_steps = self._writer.train_steps
                 self._perform_eval()
         
         # End of training. Save manually.
@@ -146,7 +151,7 @@ class TrainerSeq:
             
     def _perform_eval(self):
         eval_lazy_agent = self._agent.make_lazy_agent(evaluation=True, store_samples=False) # The samples from eval. are NOT stored.
-        worker_episodes=10
+        worker_episodes=5 # Originally 10
         sample_info = {"frames": [], "returns": []}
         eval_lazy_agent.set_replay_buffer(self._eval_env)
 
