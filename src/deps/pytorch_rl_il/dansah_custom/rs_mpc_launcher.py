@@ -22,7 +22,8 @@ from . import REWARDS
 
 
 def rs_mpc(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=128, 
-           min_env_interactions=int(1e5), logger_kwargs=dict(), seed=0):
+           min_env_interactions=int(1e5), logger_kwargs=dict(), seed=0,
+           horizon=20, num_samples=1000, minibatch_size=100, replay_start_size=5000, replay_buffer_size=1e7):
 
     args = {
         "device": "cuda" if torch.cuda.is_available() else "cpu",
@@ -51,6 +52,11 @@ def rs_mpc(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=128,
     buffer_args = { #{"n_step": 1, "prioritized": False, "use_apex": False} # Not valid for rs_mpc
         "hidden_sizes": ac_kwargs['hidden_sizes'],
         "activation": ac_kwargs['activation'],
+        "horizon": horizon,
+        "num_samples": num_samples,
+        "minibatch_size": minibatch_size,
+        "replay_start_size": replay_start_size,
+        "replay_buffer_size": replay_buffer_size,
     } 
     agent_fn = rs_mpc_preset(**buffer_args)
     save_buffer_args(buffer_args, log_dir)
@@ -96,13 +102,14 @@ def rs_mpc_preset(
     Args:
         horizon (int): Control horizon.
         num_samples (int): Number of action samples for random shooting.
+            (number of different approximated trajectories to compare.)
         lr_dyn (float): Learning rate for the dynamics network.
         minibatch_size (int): Number of experiences to sample in each training update.
         replay_buffer_size (int): Maximum number of experiences to store in the replay buffer.
     """
     def _rs_mpc(env):
         assert env.name in REWARDS, \
-            "The reward function of {} is not in deps.pytorch_rl_il.dansah_custom.reward_fns."
+            "The reward function of %s is not in deps.pytorch_rl_il.dansah_custom.reward_fns." % env.name
         reward_fn = REWARDS[env.name]()
 
         disable_on_policy_mode()

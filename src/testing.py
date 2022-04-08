@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-04-06
+Last edit: 2022-04-08
 By: dansah
 """
 
@@ -42,7 +42,7 @@ import os
 #    but not by e.g. SLM Lab algorithms, in the sense that they don't train for
 #    >= min_env_interactions steps, they just experience that many steps.
 # 2. Investigate when early stopping should be utilized.
-# 3. The SLM-logging could maybe be disabled or tweaked.
+# 3. The plotter does not create folders automatically.
 
 #########################
 # High-level Parameters #
@@ -104,6 +104,14 @@ def make_env_norm():
     """
     from custom_envs.furuta_swing_up_norm import FurutaPendulumEnvPaperNorm
     return FurutaPendulumEnvPaperNorm()
+
+def make_env_obs():
+    """
+    Creates a new Furuta Pendulum environment (swing-up),
+    where the observed state includes theta.
+    """
+    from custom_envs.furuta_swing_up_paper_obs import FurutaPendulumEnvPaperObs
+    return FurutaPendulumEnvPaperObs()
 
 def make_env_disc():
     """
@@ -367,6 +375,12 @@ def main():
             "max_ep_len": 501,
         },
         {
+            "name": "furuta_paper_obs",
+            "env_fn": make_env_obs,
+            "env_fn_disc": None,
+            "max_ep_len": 501,
+        },
+        {
             "name": "furuta_paper_r",
             "env_fn": make_env_r,
             "env_fn_disc": make_env_r_disc,
@@ -462,7 +476,7 @@ def main():
             "activation": "relu"
         },
     ] # Confirmed: a2c, dqn, a2c_s, reinforce, ppo, 
-    envs_to_use = ["cartpole"] #["cartpole", "furuta_paper", "furuta_paper_norm"]
+    envs_to_use = ["furuta_paper_obs"] #["cartpole", "furuta_paper", "furuta_paper_norm"]
     algorithms_to_use = ["rs_mpc"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
     architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
     seeds = [0] #[0, 10, 100] #[0, 10, 100, 1000]
@@ -476,7 +490,10 @@ def main():
             env_name = env_dict['name']
             for alg_dict in algorithms:
                 alg_name = alg_dict['name']
-                alg_dict = {**alg_dict, **ALGO_ENV_CONFIGS[env_name][alg_name]} # Merge-in training parameters.
+                try:
+                    alg_dict = {**alg_dict, **ALGO_ENV_CONFIGS[env_name][alg_name]} # Merge-in training parameters.
+                except:
+                    raise NotImplementedError("No configuration found for %s with the environment %s" % (alg_name, env_name))
                 annonuce_message("Now training with %s in environment %s" % (alg_name, env_name))
                 for arch_dict in architectures:
                     for seed in seeds:

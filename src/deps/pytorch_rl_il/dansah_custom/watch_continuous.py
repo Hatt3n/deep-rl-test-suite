@@ -17,7 +17,7 @@ def evaluate_algorithm(env_fn, ac_kwargs, max_ep_len, min_env_interactions=1000,
     """
     # Load environment
     env_name = ac_kwargs['env_name']
-    env = GymEnvironment(env_fn, env_name, max_ep_len, append_time=False)
+    env = GymEnvironment(env_fn, env_name, max_ep_len, append_time=False, collect_data=collect_data)
     env.seed(seed)
 
     # Load agent
