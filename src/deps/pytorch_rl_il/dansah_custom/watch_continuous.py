@@ -30,6 +30,7 @@ def evaluate_algorithm(env_fn, ac_kwargs, max_ep_len, min_env_interactions=1000,
 
     # Evaluate
     watch(agent, env, min_env_interactions, fps=fps, collect_data=collect_data, eval=True)
+    env.close()
     return env.get_data()
 
 def watch(agent, env, min_env_interactions, fps=None, collect_data=False, eval=True):

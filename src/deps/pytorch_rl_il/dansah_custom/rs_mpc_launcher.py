@@ -15,7 +15,6 @@ from .initializer import get_logger, get_device, set_device, set_replay_buffer, 
 from torch.optim import Adam
 import torch
 import logging
-import ray
 from .util import get_log_dir, save_buffer_args
 from .rs_mpc import RsMPC
 from . import REWARDS
@@ -34,7 +33,6 @@ def rs_mpc(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=128,
     }
 
     # initialization
-    ray.init(include_webui=False, ignore_reinit_error=True)
     set_device(torch.device(args['device']))
     set_seed(args['seed'])
     logger = get_logger()
