@@ -3,6 +3,7 @@ src/deps/ipm_python
 tmp/
 out*/
 data/
+!src/deps/pytorch_rl_il/rlil/environments/data/
 
 # macOS
 .DS_Store
@@ -82,6 +83,7 @@ docs/_build/
 
 # PyBuilder
 target/
+!src/deps/pytorch_rl_il/rlil/approximation/target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
