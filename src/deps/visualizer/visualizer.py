@@ -1,9 +1,11 @@
 """
 This file was created by John Wikman, who graciously gave his permission
-to include it as a part of this repository.
+to include it as a part of this repository. Minor modifications have been
+made by @dansah.
 """
 import math
 import os
+from matplotlib import projections
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -113,19 +115,22 @@ def plot_static(phi, theta, l_arm=2.0, l_pendulum=1.0):
 def plot_animated(phis, thetas,
                   us=None, dphis=None, dthetas=None, ts=None,
                   l_arm=2.0, l_pendulum=1.0,
-                  frame_rate=60, save_as=None):
+                  frame_rate=60, save_as=None, show_extra_details=False):
     """Display an animated plot of a furuta pendulum."""
 
     fig = plt.figure(figsize=(16, 9))
     fig.clear()
-    ax3d = fig.add_subplot(2, 5, (1, 2), projection="3d")
-    ax_polar_phi = fig.add_subplot(2, 5, 3, projection="polar")
-    ax_polar_theta = fig.add_subplot(2, 5, 5, projection="polar")
-    ax_u = fig.add_subplot(2, 5, 6, projection="rectilinear")
-    ax_phi = fig.add_subplot(2, 5, 7, projection="rectilinear")
-    ax_theta = fig.add_subplot(2, 5, 8, projection="rectilinear")
-    ax_dphidt = fig.add_subplot(2, 5, 9, projection="rectilinear")
-    ax_dthetadt = fig.add_subplot(2, 5, 10, projection="rectilinear")
+    if show_extra_details: # Argument added by @dansah. Hides everything except the arm and pendulum.
+        ax3d = fig.add_subplot(2, 5, (1, 2), projection="3d")
+        ax_polar_phi = fig.add_subplot(2, 5, 3, projection="polar")
+        ax_polar_theta = fig.add_subplot(2, 5, 5, projection="polar")
+        ax_u = fig.add_subplot(2, 5, 6, projection="rectilinear")
+        ax_phi = fig.add_subplot(2, 5, 7, projection="rectilinear")
+        ax_theta = fig.add_subplot(2, 5, 8, projection="rectilinear")
+        ax_dphidt = fig.add_subplot(2, 5, 9, projection="rectilinear")
+        ax_dthetadt = fig.add_subplot(2, 5, 10, projection="rectilinear")
+    else:
+        ax3d = fig.add_subplot(1, 1, (1, 1), projection="3d")
 
     if len(phis) != len(thetas):
         raise ValueError(f"Unequal input lengths len(phis) != len(thetas) ({len(phis)} != {len(thetas)})")
@@ -133,7 +138,7 @@ def plot_animated(phis, thetas,
     N_FRAMES = len(phis)
 
     if ts is None:
-        ts = [float(i+1) for i in range(N_FRAMES)]
+        ts = [float((i+1) / frame_rate) for i in range(N_FRAMES)] # Modified to divide by frame_rate. @dansah
 
     if us is None:
         us = [0.0] * N_FRAMES
@@ -147,41 +152,42 @@ def plot_animated(phis, thetas,
         theta = thetas[frame_idx]
         t = ts[frame_idx]
         _plot_3D_axes(ax3d, phi, theta, l_arm, l_pendulum)
-        _plot_polar_indicator(ax_polar_phi, phi, title="Arm Angle", color="blue")
-        _plot_polar_indicator(ax_polar_theta, theta, title="Pendulum Angle", color="orange")
-        # Keep last 4 seconds of parameters
-        # i_lower = max(0, frame_idx - int(frame_rate)*4)
-        # i_upper = frame_idx + 1
-        # _plot_timeseries(ax_u,
-        #                  ts[i_lower:i_upper],
-        #                  us[i_lower:i_upper],
-        #                  ylim=(min(us), max(us)),
-        #                  title="Control input",
-        #                  color="black")
-        # _plot_timeseries(ax_phi,
-        #                  ts[i_lower:i_upper],
-        #                  phis[i_lower:i_upper],
-        #                  ylim=(min(phis), max(phis)),
-        #                  title="Phi",
-        #                  color="blue")
-        # _plot_timeseries(ax_theta,
-        #                  ts[i_lower:i_upper],
-        #                  thetas[i_lower:i_upper],
-        #                  ylim=(min(thetas), max(thetas)),
-        #                  title="Theta",
-        #                  color="orange")
-        # _plot_timeseries(ax_dphidt,
-        #                  ts[i_lower:i_upper],
-        #                  dphis[i_lower:i_upper],
-        #                  ylim=(min(dphis), max(dphis)),
-        #                  title="dPhi/dt",
-        #                  color="red")
-        # _plot_timeseries(ax_dthetadt,
-        #                  ts[i_lower:i_upper],
-        #                  dthetas[i_lower:i_upper],
-        #                  ylim=(min(dthetas), max(dthetas)),
-        #                  title="dTheta/dt",
-        #                  color="darkgreen")
+        if show_extra_details:
+            _plot_polar_indicator(ax_polar_phi, phi, title="Arm Angle", color="blue")
+            _plot_polar_indicator(ax_polar_theta, theta, title="Pendulum Angle", color="orange")
+            # Keep last 4 seconds of parameters
+            i_lower = max(0, frame_idx - int(frame_rate)*4)
+            i_upper = frame_idx + 1
+            _plot_timeseries(ax_u,
+                            ts[i_lower:i_upper],
+                            us[i_lower:i_upper],
+                            ylim=(min(us), max(us)),
+                            title="Control input",
+                            color="black")
+            _plot_timeseries(ax_phi,
+                            ts[i_lower:i_upper],
+                            phis[i_lower:i_upper],
+                            ylim=(min(phis), max(phis)),
+                            title="Phi",
+                            color="blue")
+            _plot_timeseries(ax_theta,
+                            ts[i_lower:i_upper],
+                            thetas[i_lower:i_upper],
+                            ylim=(min(thetas), max(thetas)),
+                            title="Theta",
+                            color="orange")
+            _plot_timeseries(ax_dphidt,
+                            ts[i_lower:i_upper],
+                            dphis[i_lower:i_upper],
+                            ylim=(min(dphis), max(dphis)),
+                            title="dPhi/dt",
+                            color="red")
+            _plot_timeseries(ax_dthetadt,
+                            ts[i_lower:i_upper],
+                            dthetas[i_lower:i_upper],
+                            ylim=(min(dthetas), max(dthetas)),
+                            title="dTheta/dt",
+                            color="darkgreen")
         ax3d.set_title(f"Furuta Pendulum visualization (t = {t:.2f} seconds)")
 
     ani = animation.FuncAnimation(
