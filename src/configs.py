@@ -88,6 +88,9 @@ algo_env_configs = {
         "rs_mpc": {
             "training_frequency": 1000,
             "log_frequency": 4100,
+            "specific": {
+                "perform_eval": False,
+            }
         },
     },
 }
