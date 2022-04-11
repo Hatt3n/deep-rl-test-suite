@@ -49,7 +49,7 @@ class FurutaPendulumEnvPaperMix(FurutaPendulumEnvPaper):
         """
         Calculates the reward.
         """
-        reward = super()._calc_reward(theta_1, theta_2, dot_theta_2, tau_c)
+        reward = 1000 + super()._calc_reward(theta_1, theta_2, dot_theta_2, tau_c) # Using 1000 since it is unlike that reward < -1000
         if self.non_timelimit_termination:
             reward -= 1e4 # big negative reward
         return reward

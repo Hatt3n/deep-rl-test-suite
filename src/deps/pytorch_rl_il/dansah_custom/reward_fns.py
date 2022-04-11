@@ -122,7 +122,7 @@ class FurutaPaperMixReward(FurutaPaperObsReward):
 
     def __call__(self, states, next_states, actions):
         # state looks like: (phi, dphidt, theta, dthetadt)
-        rewards = super().__call__(None, next_states, actions)
+        rewards = 1000 + super().__call__(None, next_states, actions)
 
         phis = next_states.features[:, 0]
         thetas = next_states.features[:, 2]
