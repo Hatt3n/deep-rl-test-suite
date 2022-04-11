@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-04-08
+Last edit: 2022-04-11
 By: dansah
 """
 
@@ -42,7 +42,6 @@ import os
 #    but not by e.g. SLM Lab algorithms, in the sense that they don't train for
 #    >= min_env_interactions steps, they just experience that many steps.
 # 2. Investigate when early stopping should be utilized.
-# 3. The plotter does not create folders automatically.
 
 #########################
 # High-level Parameters #
@@ -61,7 +60,7 @@ WORK_DIR = pathlib.Path().resolve()
 ####################
 # Important values #
 ####################
-RENDER_TYPE = "def"                              # Whether to use 3d-rendering for the Furuta environments or not.
+RENDER_TYPE = "3d"                              # Whether to use 3d-rendering for the Furuta environments or not.
 
 #########################
 # Environment functions #
@@ -298,7 +297,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
     if use_3d_render:
         from deps.visualizer.visualizer import plot_animated
         for plot_data in collected_data:
-            plot_animated(phis=plot_data["phis"], thetas=plot_data["thetas"], l_arm=1.0, l_pendulum=1.0, frame_rate=50, save_as="test_movie")
+            plot_animated(phis=plot_data["phis"], thetas=plot_data["thetas"], l_arm=1.0, l_pendulum=1.0, frame_rate=50, save_as=os.path.join(BASE_DIR, "test_movie"))
             return
 
 #########################
