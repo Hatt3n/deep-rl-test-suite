@@ -161,6 +161,11 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
         plt.figure()
         plot_data(data, xaxis=xaxis, value=value, condition=condition, smooth=smooth, estimator=estimator)
     if fname is not None:
+        try:
+            log_dir = fname[:fname.rfind(os.path.sep)+1]
+            os.makedirs(log_dir)
+        except:
+            print("NOTE: Potentially overriding previous result file %s" % fname)
         plt.savefig(fname)
     else:
         plt.show()
