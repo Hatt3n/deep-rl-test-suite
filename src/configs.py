@@ -90,6 +90,8 @@ algo_env_configs = {
             "log_frequency": 4100,
             "specific": {
                 "perform_eval": False,
+                "replay_start_size": 10000,
+                "horizon": 40,
             }
         },
     },
