@@ -5,11 +5,12 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-04-11
+Last edit: 2022-04-12
 By: dansah
 """
 
 from configs import ALGO_ENV_CONFIGS
+from testing_config import get_high_level_parameters, get_environments_algorithms_architectures_seeds, get_rendering_config
 
 from deps.spinningup.dansah_custom import test_policy
 from deps.spinningup.dansah_custom import plot
@@ -23,10 +24,6 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 import numpy as np
 import os
-
-# Eager execution is required for deep copy. However, tf.placeholder() won't work with eager execution...
-#tf.enable_eager_execution()
-#import copy
 
 # CPU-Only <- Can result in better performance
 #import os
@@ -42,25 +39,31 @@ import os
 #    but not by e.g. SLM Lab algorithms, in the sense that they don't train for
 #    >= min_env_interactions steps, they just experience that many steps.
 # 2. Investigate when early stopping should be utilized.
+# 3. After ~4*10^5 env. interactions, rs_mpc crashed with the error:
+#    "libc++abi: terminating with uncaught exception of type std::__1::system_error: condition_variable wait failed: Invalid argument"
+#    This seems to be a PyTorch bug on macOS. A user in https://github.com/pytorch/pytorch/issues/66033 
+#    suggests to run torch.set_num_threads(1) to fix this, i.e. the fix is to force single-threading.
+#    UPDATE: It also crashed 5012 frames into its 5th training of cartpole, with 10^5 interactions
+#    per run. 
+#    Both recorded crashes occurred (almost?) immediately after saving the model, and very shortly after
+#    4*10^5 interactions had been completed.
 
 #########################
 # High-level Parameters #
 #########################
-do_training = False
-do_policy_test = True
-do_plots = False
+DO_TRAINING, DO_POLICY_TEST, DO_PLOTS = get_high_level_parameters()
 
 #######################
 # Training parameters #
 #######################
-MIN_ENV_INTERACTIONS = 40000                    # The minimum number of interactions the agents should perform before stopping training.
+MIN_ENV_INTERACTIONS = 100000                   # The minimum number of interactions the agents should perform before stopping training.
 BASE_DIR = os.path.join('.', 'out%s' % os.sep)  # The base directory for storing the output of the algorithms.
 WORK_DIR = pathlib.Path().resolve()
 
 ####################
 # Important values #
 ####################
-RENDER_TYPE = "3d"                              # Whether to use 3d-rendering for the Furuta environments or not.
+RENDER_TYPE, SAVE_VIDEO = get_rendering_config()
 
 #########################
 # Environment functions #
@@ -112,6 +115,15 @@ def make_env_obs():
     from custom_envs.furuta_swing_up_paper_obs import FurutaPendulumEnvPaperObs
     return FurutaPendulumEnvPaperObs()
 
+def make_env_obs_disc():
+    """
+    Creates a new Furuta Pendulum environment (swing-up),
+    where the observed state includes theta and the action
+    space is discrete.
+    """
+    from custom_envs.env_util import DiscretizingEnvironmentWrapper
+    return DiscretizingEnvironmentWrapper(make_env_obs)
+
 def make_env_mix():
     """
     Creates a new Furuta Pendulum Mix environment (swing-up),
@@ -127,7 +139,7 @@ def make_env_mix_disc():
     where the action space is discrete.
     """
     from custom_envs.env_util import DiscretizingEnvironmentWrapper
-    return DiscretizingEnvironmentWrapper(make_env_mix)    
+    return DiscretizingEnvironmentWrapper(make_env_mix)
 
 def make_env_disc():
     """
@@ -205,11 +217,10 @@ def train_algorithm(alg_dict, arch_dict, env_dict, seed=0):
         with tf.Graph().as_default():
             algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=alg_dict['training_frequency'], 
                          min_env_interactions=MIN_ENV_INTERACTIONS, logger_kwargs=logger_kwargs, seed=seed, **alg_specific_params)
-        #tf.get_default_session().close()
-        #tf.reset_default_graph()
     else:
         algorithm_fn(env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=alg_dict['training_frequency'], 
                      min_env_interactions=MIN_ENV_INTERACTIONS, logger_kwargs=logger_kwargs, seed=seed, **alg_specific_params)
+
 
 ########################
 # Evaluation functions #
@@ -237,11 +248,17 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
                                                           False,  # Deterministic true/false. Only used by the SAC algorithm.
                                                           force_disc)
         if use_3d_render:
-            env.collect_data()
+            try:
+                env.collect_data()
+            except:
+                print("WARNING: The environment does not support collecting data. Default rendering will be used.")
+                use_3d_render = False
+                use_def_render = True
         test_policy.run_policy(env, get_action, max_ep_len=max_ep_len, num_episodes=2, render=use_def_render)
         if use_3d_render:
             collected_data = env.get_data()
         env.close()
+
     elif alg_dict['type'] == 'baselines':
         with tf.Graph().as_default():
             ac_kwargs = create_ac_kwargs(arch_dict['layers'], get_activation_by_name(arch_dict['activation'], use_torch=False))
@@ -252,7 +269,9 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             from baselines.common import tf_util
             from deps.baselines.dansah_custom.dummy_vec_env import DummyVecEnv
             logger.log("Running trained model")
-            env = DummyVecEnv(env_fns=[env_fn], collect_data=use_3d_render)
+            env = DummyVecEnv(env_fns=[env_fn], max_ep_len=max_ep_len, collect_data=use_3d_render)
+            use_def_render = not env.collect_data # True if data will be collected
+            use_3d_render = not use_def_render
             obs = env.reset()
 
             state = model.initial_state if hasattr(model, 'initial_state') else None
@@ -280,25 +299,29 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             collected_data = env.get_data()
             env.close()
             tf_util.get_session().close()
+
     elif alg_dict['type'] == 'slm':
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation'], use_torch=True), 
                                      arch_dict=arch_dict, env_dict=env_dict, output_dir=output_dir, xtra_args=True)
         collected_data = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=max_ep_len, 
                                             min_env_interactions=2*max_ep_len, logger_kwargs=dict(), seed=0, mode='enjoy', collect_data=use_3d_render)
+
     elif alg_dict['type'] == 'rlil':
         from deps.pytorch_rl_il.dansah_custom.watch_continuous import evaluate_algorithm
         act_func = get_activation_by_name(arch_dict['activation'], use_torch=True)
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=act_func, arch_dict=arch_dict, env_dict=env_dict,
                                      output_dir=output_dir, xtra_args=True)
         collected_data = evaluate_algorithm(env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, min_env_interactions=2*max_ep_len, seed=0, collect_data=use_3d_render)
+
     else:
         raise NotImplementedError("No handler for algorithm type %s" % (alg_dict['type']))
     
-    if use_3d_render:
+    if use_3d_render and collected_data is not None:
         from deps.visualizer.visualizer import plot_animated
         for plot_data in collected_data:
-            plot_animated(phis=plot_data["phis"], thetas=plot_data["thetas"], l_arm=1.0, l_pendulum=1.0, frame_rate=50, save_as=os.path.join(BASE_DIR, "test_movie"))
+            plot_animated(phis=plot_data["phis"], thetas=plot_data["thetas"], l_arm=1.0, l_pendulum=1.0, frame_rate=50, save_as=get_video_filepath())
             return
+
 
 #########################
 # Misc helper functions #
@@ -338,6 +361,17 @@ def get_res_filepath():
     """
     return os.path.join(WORK_DIR, "out", "res.html")
 
+def get_video_filepath():
+    """
+    Returns the relative filepath, excluding extension, that is
+    used by default for saving evaluation videos. None is
+    returned when SAVE_VIDEO is False.
+    """
+    if SAVE_VIDEO:
+        return os.path.join(BASE_DIR, "test_movie")
+    else:
+        return None
+
 def get_activation_by_name(activation_name, use_torch=True):
     """
     Takes the activation function by name as a string, returning
@@ -369,6 +403,7 @@ def get_dicts_in_list_matching_names(name_list, dict_list):
             res.append(dict)
     return res
 
+
 #################
 # Main function #
 #################
@@ -393,7 +428,7 @@ def main():
         {
             "name": "furuta_paper_obs",
             "env_fn": make_env_obs,
-            "env_fn_disc": None,
+            "env_fn_disc": make_env_obs_disc,
             "max_ep_len": 501,
         },
         {
@@ -497,17 +532,14 @@ def main():
             "layers": [400, 300],
             "activation": "relu"
         },
-    ] # Confirmed: a2c, dqn, a2c_s, reinforce, ppo, 
-    envs_to_use = ["furuta_paper_mix"] #["cartpole", "furuta_paper", "furuta_paper_norm"]
-    algorithms_to_use = ["rs_mpc"] #["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
-    architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
-    seeds = [0] #[0, 10, 100] #[0, 10, 100, 1000]
+    ]
+    envs_to_use, algorithms_to_use, architecture_to_use, seeds = get_environments_algorithms_architectures_seeds()
 
     envs = get_dicts_in_list_matching_names(envs_to_use, all_environments)
     algorithms = get_dicts_in_list_matching_names(algorithms_to_use, all_algorithms)
     architectures = get_dicts_in_list_matching_names(architecture_to_use, all_architectures)
 
-    if do_training:
+    if DO_TRAINING:
         for env_dict in envs:
             env_name = env_dict['name']
             for alg_dict in algorithms:
@@ -522,7 +554,7 @@ def main():
                         heads_up_message("Using arch %s and seed %s" % (arch_dict['name'], seed))
                         train_algorithm(alg_dict, arch_dict, env_dict, seed)
 
-    if do_policy_test:
+    if DO_POLICY_TEST:
         seed = seeds[0]
         for env_dict in envs:
             for alg_dict in algorithms:
@@ -532,7 +564,7 @@ def main():
                     heads_up_message("Using arch %s" % (arch_dict['name']))
                     evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type=RENDER_TYPE)
 
-    if do_plots:
+    if DO_PLOTS:
         res_maker_dict = dict()
         for env_dict in envs:
             env_name = env_dict['name']
@@ -558,6 +590,7 @@ def main():
         print(res_file)
         import webbrowser
         assert webbrowser.get().open("file://" + res_file)
+
 
 if __name__ == "__main__":
     main()
