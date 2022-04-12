@@ -9,7 +9,7 @@ from .initializer import (call_seed,
                           get_replay_buffer,
                           get_writer,
                           is_on_policy_mode)
-from deps.pytorch_rl_il.rlil.samplers import StartInfo
+from deps.pytorch_rl_il.dansah_custom.asyncsampler import StartInfo
 from deps.spinningup.dansah_custom.logx import EpochLogger
 import numpy as np
 import time

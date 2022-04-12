@@ -8,7 +8,6 @@ Modified by @dansah
 import numpy as np
 from .writer import ExperimentWriter
 from .initializer import get_logger, set_writer, set_logger, set_seed
-from deps.pytorch_rl_il.dansah_custom.asyncsampler import AsyncSampler
 from .trainer_seq import TrainerSeq
 import os
 import logging
