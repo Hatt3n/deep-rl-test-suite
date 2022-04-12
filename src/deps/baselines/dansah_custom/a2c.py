@@ -127,7 +127,7 @@ MODEL_FILE_NAME="saved_model"
 # Wrapper providing similar API to spin up.
 # Modified by @dansah
 def a2c(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=4000, 
-        epochs=50, logger_kwargs=dict(), seed=0, min_env_interactions=0, load_path=None):
+        logger_kwargs=dict(), seed=0, min_env_interactions=0, load_path=None):
     """
     Trains an A2C agent if load_path is None, otherwise loads
     the model and returns it.
@@ -148,7 +148,7 @@ def a2c(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=4000,
                       env=DummyVecEnv(env_fns=[env_fn], max_ep_len=max_ep_len),
                       seed=seed,
                       nsteps=steps_per_epoch, # Steps per epoch = steps per update
-                      num_epochs=epochs,
+                      num_epochs=0,
                       max_ep_len=max_ep_len,
                       max_grad_norm=None,
                       total_timesteps=min_env_interactions, 
@@ -159,7 +159,7 @@ def a2c(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=4000,
         tf_util.get_session().close()
     else:
         model = learn(network="mlp", # Must respect the ac_kwargs 
-                      env=DummyVecEnv(env_fns=[env_fn]),
+                      env=DummyVecEnv(env_fns=[env_fn], max_ep_len=max_ep_len),
                       seed=seed,
                       nsteps=0, # Disable training, we just want to load
                       num_epochs=0,

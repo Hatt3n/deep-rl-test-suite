@@ -55,8 +55,13 @@ class GymEnvironment(Environment):
         Action.set_action_space(env.action_space)
         self.is_discrete = env.is_discrete
 
+        self.collect_data = False
         if collect_data:
-            self._env.collect_data()
+            try:
+                self._env.collect_data()
+                self.collect_data = True
+            except:
+                print("WARNING: The environment does not support collecting data. Default rendering will be used.")
 
     def set_append_time(self, append_time):
         self._append_time = append_time

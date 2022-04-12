@@ -23,9 +23,14 @@ class EnvWrapper():
         self.is_discrete = self.env.is_discrete
         self.is_venv = False # Only one environment at a time
         self.total_reward = np.nan
-        self.to_render = util.in_eval_lab_mode() and not collect_data
+        self.collect_data = False
         if collect_data:
-            self.env.collect_data()
+            try:
+                self.env.collect_data()
+                self.collect_data = True
+            except:
+                print("WARNING: The environment does not support collecting data. Default rendering will be used.")
+        self.to_render = util.in_eval_lab_mode() and not self.collect_data
         
         # From base.py in src\deps\SLM_Lab\slm_lab\env
         self.env_spec = spec['env'][0]  # idx 0 for single-env

@@ -33,8 +33,13 @@ class DummyVecEnv(VecEnv):
         self.total_reward = np.float16(0)
         self.ep_len_counter = 0
         self.max_ep_len = max_ep_len
+        self.collect_data = False
         if collect_data:
-            self.env.collect_data()
+            try:
+                self.env.collect_data()
+                self.collect_data = True
+            except:
+                print("WARNING: The environment does not support collecting data. Default rendering will be used.")
 
     def get_data(self):
         try:
