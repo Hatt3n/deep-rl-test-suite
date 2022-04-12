@@ -53,6 +53,9 @@ algo_env_configs = {
         "rs_mpc": {
             "training_frequency": 32,
             "log_frequency": 400,
+            "specific": {
+                "perform_eval": False,
+            }
         },
     },
     "furuta_paper": {
