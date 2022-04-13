@@ -7,8 +7,14 @@ Added by @dansah
 algo_env_configs = {
     "cartpole": {
         "a2c": {
-            "training_frequency": 32,       # Value from SLM_Lab spec-file "a2c_gae_cartpole.json"
+            "training_frequency": 16,
             "log_frequency": 400,
+            "specific": {
+                "lr": 5e-3,
+                "max_grad_norm": None,
+                "vf_coef": 0.8, 
+                "ent_coef": 0.01,
+            }
         },
         "a2c_s": {
             "training_frequency": 32,
@@ -25,6 +31,7 @@ algo_env_configs = {
             "log_frequency": 400,
             "specific": {
                 "start_steps": 2000,
+                "perform_eval": False,
             },
         },
         "dqn": {
@@ -72,6 +79,7 @@ algo_env_configs = {
             "log_frequency": 2000,
             "specific": {
                 "start_steps": 8000,
+                "perform_eval": False,
                 #"replay_size": 10000,
                 #"batch_size": 10,
             },
