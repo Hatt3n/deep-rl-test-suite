@@ -128,29 +128,20 @@ MODEL_FILE_NAME="saved_model"
 # Modified by @dansah
 def a2c(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=4000, 
         logger_kwargs=dict(), seed=0, min_env_interactions=0, 
-        load_path=None, max_grad_norm=0.5, lr=7e-4):
+        load_path=None, max_grad_norm=0.5, lr=7e-4, vf_coef=0.5, ent_coef=0.01):
     """
     Trains an A2C agent if load_path is None, otherwise loads
     the model and returns it.
     """
     if load_path is None:
-        #model = learn(network="mlp", # Must respect the ac_kwargs 
-        #              env=DummyVecEnv(env_fns=[env_fn]),
-        #              seed=seed,
-        #              nsteps=steps_per_epoch, # Steps per epoch = steps per update
-        #              num_epochs=epochs,
-        #              max_grad_norm=None,
-        #              #total_timesteps=int(steps_per_epoch*epochs), 
-        #              log_interval=200,
-        #              logger_kwargs=logger_kwargs,
-        #              **ac_kwargs
-        #              ) 
         model = learn(network="mlp", # Must respect the ac_kwargs 
                       env=DummyVecEnv(env_fns=[env_fn], max_ep_len=max_ep_len),
                       seed=seed,
                       nsteps=steps_per_epoch, # Steps per epoch = steps per update
                       num_epochs=0,
                       max_ep_len=max_ep_len,
+                      vf_coef=vf_coef,
+                      ent_coef=ent_coef,
                       max_grad_norm=max_grad_norm,
                       lr=lr,
                       total_timesteps=min_env_interactions, 
