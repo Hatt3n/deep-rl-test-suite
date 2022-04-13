@@ -88,7 +88,7 @@ class PPOBuffer:
 def ppo(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, 
         steps_per_epoch=4000, epochs=50, min_env_interactions=0, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
         vf_lr=1e-3, train_pi_iters=80, train_v_iters=80, lam=0.97, max_ep_len=1000,
-        target_kl=0.01, logger_kwargs=dict(), save_freq=10):
+        target_kl=0.01, logger_kwargs=dict(), save_freq=-1):
     """
     Proximal Policy Optimization (by clipping), 
 
@@ -193,7 +193,8 @@ def ppo(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         logger_kwargs (dict): Keyword args for EpochLogger.
 
         save_freq (int): How often (in terms of gap between epochs) to save
-            the current policy and value function.
+            the current policy and value function. This is automatically
+            determined by default.
 
     """
 
@@ -307,6 +308,10 @@ def ppo(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     if min_env_interactions != 0: # Added by dansah
         epochs = int(np.ceil(min_env_interactions / local_steps_per_epoch))
 
+    # Set save frequency. The final model is always saved.
+    if save_freq < 1:
+        save_freq = max(int(epochs / 5), 1)
+
     # Main loop: collect experience in env and update/log each epoch
     for epoch in range(epochs):
         real_epoch = epoch
@@ -344,18 +349,17 @@ def ppo(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
                     o, ep_ret, ep_len = env.reset(), 0, 0 # Only reset the environment on a terminal signal.
 
 
-            if epoch_ended: # End of epoch
+            real_curr_t = epoch * steps_per_epoch + t + 1
 
+            if epoch_ended: # End of epoch
                 # Save model
                 if (epoch % save_freq == 0) or (epoch == epochs-1):
                     logger.save_state({'env': env}, None)
+                    print("NOTE: Saved the model, at %s steps." % (real_curr_t))
 
                 # Perform PPO update!
                 update()
-
                 real_epoch += 1
-
-            real_curr_t = epoch * steps_per_epoch + t + 1
 
             # Log info about epoch
             if real_curr_t % logger.log_frequency == 0:

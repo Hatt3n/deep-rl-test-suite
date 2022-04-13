@@ -38,8 +38,8 @@ class Model(object):
         - Save load the model
     """
     def __init__(self, policy, env, nsteps,
-            ent_coef=0.01, vf_coef=0.5, max_grad_norm=0.5, lr=7e-4,
-            alpha=0.99, epsilon=1e-5, total_timesteps=int(80e6), lrschedule='linear'):
+                 ent_coef=0.01, vf_coef=0.5, max_grad_norm=0.5, lr=7e-4,
+                 alpha=0.99, epsilon=1e-5, total_timesteps=int(80e6), lrschedule='linear'):
 
         sess = tf_util.get_session()
         nenvs = env.num_envs if hasattr(env, 'num_envs') else 1
@@ -127,7 +127,8 @@ MODEL_FILE_NAME="saved_model"
 # Wrapper providing similar API to spin up.
 # Modified by @dansah
 def a2c(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=4000, 
-        logger_kwargs=dict(), seed=0, min_env_interactions=0, load_path=None):
+        logger_kwargs=dict(), seed=0, min_env_interactions=0, 
+        load_path=None, max_grad_norm=0.5, lr=7e-4):
     """
     Trains an A2C agent if load_path is None, otherwise loads
     the model and returns it.
@@ -150,12 +151,14 @@ def a2c(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=4000,
                       nsteps=steps_per_epoch, # Steps per epoch = steps per update
                       num_epochs=0,
                       max_ep_len=max_ep_len,
-                      max_grad_norm=None,
+                      max_grad_norm=max_grad_norm,
+                      lr=lr,
                       total_timesteps=min_env_interactions, 
                       logger_kwargs=logger_kwargs,
                       **ac_kwargs
                      ) 
         model.save(osp.expanduser(logger_kwargs['output_dir'] + MODEL_FILE_NAME))
+        print("NOTE: Saved the model.")
         tf_util.get_session().close()
     else:
         model = learn(network="mlp", # Must respect the ac_kwargs 
@@ -184,10 +187,8 @@ def learn(
     epsilon=1e-5,
     alpha=0.99,
     gamma=0.99,
-    #log_interval=100,
     load_path=None,
     logger_kwargs=dict(),
-    #save_freq=10,
     **network_kwargs):
 
     '''
@@ -264,7 +265,7 @@ def learn(
 
     # Instantiate the model object (that creates step_model and train_model)
     model = Model(policy=policy, env=env, nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef,
-        max_grad_norm=max_grad_norm, lr=lr, alpha=alpha, epsilon=epsilon, total_timesteps=total_timesteps, lrschedule=lrschedule)
+                  max_grad_norm=max_grad_norm, lr=lr, alpha=alpha, epsilon=epsilon, total_timesteps=total_timesteps, lrschedule=lrschedule)
     if load_path is not None:
         model.load(load_path)
 
@@ -290,25 +291,6 @@ def learn(
 
         # Calculate the fps (frame per second)
         fps = int((epoch*nbatch)/nseconds)
-        #if epoch % log_interval == 0 or epoch == 1:
-        #print("Actions %s, Rewards %s, Ep info %s" % (actions, rewards, epinfobuf))
-
-        # Save model
-        #if (epoch % save_freq == 0) or (epoch == num_epochs-1):
-        #    logger.save_state({'env': env}, None)
-
-        # Calculates if value function is a good predicator of the returns (ev > 1)
-        # or if it's just worse than predicting nothing (ev =< 0)
-        #ev = explained_variance(values, rewards)
-        #logger.log_tabular("nepochs", epoch) # TODO: Swited from nupdates to nepochs. Is this a problem?
-        #logger.log_tabular("total_timesteps", epoch*nbatch)
-        #logger.log_tabular("fps", fps)
-        #logger.log_tabular("policy_entropy", float(policy_entropy))
-        #logger.log_tabular("value_loss", float(value_loss))
-        #logger.log_tabular("explained_variance", float(ev))
-        #logger.log_tabular("eprewmean", safemean([epinfo['r'] for epinfo in epinfobuf]))
-        #logger.log_tabular("eplenmean", safemean([epinfo['l'] for epinfo in epinfobuf]))
-        #logger.dump_tabular()
 
         # Log info about epoch
         if runner.at_least_one_done: # Ensure that at least 1 episode has finished since last log.

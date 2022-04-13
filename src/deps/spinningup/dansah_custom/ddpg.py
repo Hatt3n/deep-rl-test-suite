@@ -44,8 +44,8 @@ class ReplayBuffer:
 def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, 
          steps_per_epoch=4000, epochs=100, min_env_interactions=0, replay_size=int(1e6), gamma=0.99, 
          polyak=0.995, pi_lr=1e-3, q_lr=1e-3, batch_size=100, start_steps=10000, 
-         update_after=1000, update_every=50, act_noise=0.1, num_test_episodes=10, 
-         max_ep_len=1000, logger_kwargs=dict(), save_freq=1):
+         update_after=1000, act_noise=0.1, perform_eval=True, 
+         max_ep_len=1000, logger_kwargs=dict(), save_freq=-1):
     """
     Deep Deterministic Policy Gradient (DDPG)
 
@@ -119,30 +119,37 @@ def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             between gradient descent updates. Note: Regardless of how long 
             you wait between updates, the ratio of env steps to gradient steps 
             is locked to 1.
-            NOTE: This parameter is ignored, use steps_per_epoch to control
-            the training frequency.
+            NOTE: This parameter has been removed, use steps_per_epoch to 
+            control the training frequency.
 
         act_noise (float): Stddev for Gaussian exploration noise added to 
             policy at training time. (At test time, no noise is added.)
 
         num_test_episodes (int): Number of episodes to test the deterministic
             policy at the end of each epoch.
+            NOTE: Removed.
+        
+        perform_eval (bool): Whether to perform testing of the policy at the
+            end of each epoch.
 
         max_ep_len (int): Maximum length of trajectory / episode / rollout.
 
         logger_kwargs (dict): Keyword args for EpochLogger.
 
         save_freq (int): How often (in terms of gap between epochs) to save
-            the current policy and value function.
+            the current policy and value function. This is automatically
+            determined by default.
 
     """
 
+    # Set-up logging
     logger = EpochLogger(**logger_kwargs)
     logger.save_config(locals())
 
     torch.manual_seed(seed)
     np.random.seed(seed)
 
+    # Determine action space
     env, test_env = env_fn(), env_fn()
     obs_dim = env.observation_space.shape
     if env.is_discrete:
@@ -154,6 +161,12 @@ def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         # Action limit for clamping: critically, assumes all dimensions share the same bound!
         act_limit_lower = env.action_space.low[0]
         act_limit_upper = env.action_space.high[0]
+    
+    # Set-up evaluation
+    if perform_eval:
+        num_test_episodes = 5
+    else:
+        num_test_episodes = 0
 
     # Added by dansah
     env.seed(seed)
@@ -262,6 +275,11 @@ def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     
     if min_env_interactions != 0: # Added by dansah
         epochs = int(np.ceil(min_env_interactions / steps_per_epoch))
+    
+    # Set save frequency. The final model is always saved.
+    latest_saved_epoch = 0
+    if save_freq < 1:
+        save_freq = max(int(epochs / 5), 1)
 
     # Prepare for interaction with environment
     at_least_one_done = False
@@ -306,17 +324,19 @@ def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             o, ep_ret, ep_len = env.reset(), 0, 0
 
         # Update handling
-        if t >= update_after and t % steps_per_epoch == 0:
+        if (t+1) >= update_after and (t+1) % steps_per_epoch == 0:
             epoch += 1 # NOTE: Technically, the amount of updates is steps_per_epoch times larger than this value.
             for _ in range(steps_per_epoch):
                 batch = replay_buffer.sample_batch(batch_size)
                 update(data=batch)
 
-        # End of epoch handling
+        # End of time step handling
 
         # Save model
-        if (epoch % save_freq == 0) or (epoch == epochs):
+        if latest_saved_epoch < epoch and (epoch % save_freq == 0 or (t+1) == total_steps):
             logger.save_state({'env': env}, None)
+            latest_saved_epoch = epoch
+            print("NOTE: Saved the model, at %s steps." % (t+1))
 
         # Logging
         real_curr_t = t +1
@@ -332,9 +352,10 @@ def ddpg(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             # Log info about epoch
             logger.log_tabular('Epoch', epoch)
             logger.log_tabular('EpRet', with_min_and_max=True)
-            logger.log_tabular('TestEpRet', with_min_and_max=True)
+            if perform_eval:
+                logger.log_tabular('TestEpRet', with_min_and_max=True)
+                logger.log_tabular('TestEpLen', average_only=True)
             logger.log_tabular('EpLen', average_only=True)
-            logger.log_tabular('TestEpLen', average_only=True)
             logger.log_tabular('TotalEnvInteracts', real_curr_t)
             logger.log_tabular('QVals', with_min_and_max=True)
             logger.log_tabular('LossPi', average_only=True)
