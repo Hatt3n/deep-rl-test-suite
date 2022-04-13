@@ -67,7 +67,10 @@ class SLM_Trainer():
                     rft_string = info.get('rft')
                     if (rft_string and rft_string == 'timelimit') or ep_len == self.spec['env'][0]['max_t']:
                         rft = 1
-            self.agent.update(state, action, reward, next_state, done, rft)
+            update_ret = self.agent.update(state, action, reward, next_state, done, rft)
+            if do_extra_logging and update_ret[0] is not np.nan:
+                sp_logger.store(Loss=update_ret[0])
+
             state = next_state
 
             if do_extra_logging and real_curr_t % sp_logger.log_frequency == 0:
@@ -87,6 +90,7 @@ class SLM_Trainer():
                 #sp_logger.log_tabular('Entropy', average_only=True)
                 #sp_logger.log_tabular('ClipFrac', average_only=True)
                 #sp_logger.log_tabular('StopIter', average_only=True)
+                sp_logger.log_tabular('Loss', average_only=True)
                 sp_logger.log_tabular('Time', time.time()-tstart)
                 sp_logger.dump_tabular()
 

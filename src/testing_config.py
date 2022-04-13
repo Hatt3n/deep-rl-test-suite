@@ -16,7 +16,7 @@ def get_high_level_parameters():
 
 def get_environments_algorithms_architectures_seeds():
     envs_to_use = ["cartpole"] #["furuta_paper_mix"] #["cartpole", "furuta_paper", "furuta_paper_norm"]
-    algorithms_to_use = ["a2c"] #["rs_mpc", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
+    algorithms_to_use = ["dqn"] #["rs_mpc", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
     architecture_to_use = ["64_64_relu"] #["64_64_relu", "256_128_relu"] # tanh does not work well; rather useless to try it.
     seeds = [0] #[0, 10, 100, 1000]
     return envs_to_use, algorithms_to_use, architecture_to_use, seeds

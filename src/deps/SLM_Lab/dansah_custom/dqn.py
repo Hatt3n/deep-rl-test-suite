@@ -17,45 +17,68 @@ logger = logger.get_logger(__name__)
 
 def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, 
         epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train', collect_data=False,
-        training_start_step=-1, explore_var_spec=None, memory=None):
+        training_start_step=-1, explore_var_spec=None, memory=None, action_pdtype="Categorical", 
+        action_policy="boltzmann", clip_grad_val=0.5, lr_scheduler_spec=None, 
+        net_update_type="replace", net_update_frequency=10, training_batch_iter=2, training_iter=2):
 
+    # Initialize all required values.
     if min_env_interactions == 0:
         min_env_interactions = epochs * steps_per_epoch
+    
+    if explore_var_spec is None:
+        explore_var_spec = {
+            "start_val": 2.0,
+            "end_val": 0.1,
+            "end_step": 40000,
+        }
+    
+    if memory is None:
+        memory = {
+            "max_size": 100000,
+            "use_cer": False,
+        }
+    
+    if lr_scheduler_spec is None:
+        lr_scheduler_spec = {
+            "name": "LinearToZero", # Calculates LR as "x: 1 - x / frame"; ensure frame is not < max_frame.
+            "frame": min_env_interactions + max(steps_per_epoch,max_ep_len),
+        }
 
     os.environ['lab_mode'] = mode
 
+    # Set-up configuration.
     spec = {
         "name": "dqn_boltzmann",
         "agent": [{
             "name": "DQN",
             "algorithm": {
                 "name": "DQN",
-                "action_pdtype": "Categorical",
-                "action_policy": "boltzmann",
+                "action_pdtype": action_pdtype,
+                "action_policy": action_policy,
                 "explore_var_spec": {
                     "name": "linear_decay",
-                    "start_val": 2.0 if explore_var_spec is None else explore_var_spec['start_val'],
-                    "end_val": 0.1 if explore_var_spec is None else explore_var_spec['end_val'],
+                    "start_val": explore_var_spec['start_val'],
+                    "end_val": explore_var_spec['end_val'],
                     "start_step": 0,
-                    "end_step": 40000 if explore_var_spec is None else explore_var_spec['end_step'], 
+                    "end_step": explore_var_spec['end_step'], 
                 },
                 "gamma": 0.99,
-                "training_batch_iter": 2,
-                "training_iter": 2,
+                "training_batch_iter": training_batch_iter,
+                "training_iter": training_iter,
                 "training_frequency": steps_per_epoch, # OnPolicyBatchReplay trains every X experiences.
                 "training_start_step": steps_per_epoch if training_start_step == -1 else training_start_step,
             },
             "memory": {
                 "name": "Replay",
                 "batch_size": 32,
-                "max_size": 100000 if memory is None else memory['max_size'],
-                "use_cer": False
+                "max_size": memory['max_size'],
+                "use_cer": memory['use_cer']
             },
             "net": {
                 "type": "MLPNet",
                 "hid_layers": ac_kwargs['hidden_sizes'],
                 "hid_layers_activation": ac_kwargs['activation_name'],
-                "clip_grad_val": 0.5,
+                "clip_grad_val": clip_grad_val,
                 "loss_spec": {
                     "name": "MSELoss"
                 },
@@ -63,12 +86,10 @@ def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
                     "name": "Adam",
                     "lr": 0.02
                 },
-                "lr_scheduler_spec": { # TODO: Consider changing.
-                    "name": "LinearToZero", # Calculates LR as "x: 1 - x / frame"; ensure frame is not < max_frame.
-                    "frame": min_env_interactions + max(steps_per_epoch,max_ep_len),
-                },
-                "update_type": "replace",
-                "update_frequency": 10,
+                "lr_scheduler_spec": lr_scheduler_spec,
+                "update_type": net_update_type,
+                "update_frequency": net_update_frequency,
+                "polyak_coef": 0,
                 "gpu": False
             }
         }],
