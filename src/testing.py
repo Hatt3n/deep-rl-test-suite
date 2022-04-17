@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-04-12
+Last edit: 2022-04-17
 By: dansah
 """
 
@@ -115,15 +115,6 @@ def make_env_obs():
     from custom_envs.furuta_swing_up_paper_obs import FurutaPendulumEnvPaperObs
     return FurutaPendulumEnvPaperObs()
 
-def make_env_obs_disc():
-    """
-    Creates a new Furuta Pendulum environment (swing-up),
-    where the observed state includes theta and the action
-    space is discrete.
-    """
-    from custom_envs.env_util import DiscretizingEnvironmentWrapper
-    return DiscretizingEnvironmentWrapper(make_env_obs)
-
 def make_env_mix():
     """
     Creates a new Furuta Pendulum Mix environment (swing-up),
@@ -133,31 +124,6 @@ def make_env_mix():
     from custom_envs.furuta_swing_up_mix import FurutaPendulumEnvPaperMix
     return FurutaPendulumEnvPaperMix()
 
-def make_env_mix_disc():
-    """
-    Creates a new Furuta Pendulum Mix environment (swing-up),
-    where the action space is discrete.
-    """
-    from custom_envs.env_util import DiscretizingEnvironmentWrapper
-    return DiscretizingEnvironmentWrapper(make_env_mix)
-
-def make_env_disc():
-    """
-    Creates a new Furuta Pendulum environment (swing-up),
-    where the action space is discrete.
-    """
-    from custom_envs.env_util import DiscretizingEnvironmentWrapper
-    return DiscretizingEnvironmentWrapper(make_env)
-
-def make_env_norm_disc():
-    """
-    Creates a new Furuta Pendulum environment (swing-up),
-    where the action space is discrete, and the states and
-    rewards are (to an extent) normalized.
-    """
-    from custom_envs.env_util import DiscretizingEnvironmentWrapper
-    return DiscretizingEnvironmentWrapper(make_env_norm)
-
 def make_env_r():
     """
     Creates a new Furuta Pendulum environment (swing-up),
@@ -166,15 +132,6 @@ def make_env_r():
     from custom_envs.furuta_swing_up_paper_r import FurutaPendulumEnvPaperRecurrent
     return FurutaPendulumEnvPaperRecurrent()
 
-def make_env_r_disc():
-    """
-    Creates a new Furuta Pendulum environment (swing-up),
-    where one of the values in the observed state is the previous input to the environment
-    (the previous input being the one gotten _after_ converting the discrete output of the
-    agent to a continuous value).
-    """
-    from custom_envs.env_util import DiscretizingEnvironmentWrapper
-    return DiscretizingEnvironmentWrapper(make_env_r)
 
 ######################
 # Training functions #
@@ -411,6 +368,7 @@ def main():
     """
     Runns all of the experiments.
     """
+    from custom_envs.env_util import DiscretizingEnvironmentWrapper
     from deps.spinningup.dansah_custom.ddpg import ddpg
     from deps.spinningup.dansah_custom.ppo import ppo
     from deps.baselines.dansah_custom.a2c import a2c
@@ -422,31 +380,31 @@ def main():
         {
             "name": "furuta_paper",
             "env_fn": make_env,
-            "env_fn_disc": make_env_disc,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env),
             "max_ep_len": 501,
         },
         {
             "name": "furuta_paper_obs",
             "env_fn": make_env_obs,
-            "env_fn_disc": make_env_obs_disc,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_obs),
             "max_ep_len": 501,
         },
         {
             "name": "furuta_paper_mix",
             "env_fn": make_env_mix,
-            "env_fn_disc": make_env_mix_disc,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_mix),
             "max_ep_len": 501,
         },
         {
             "name": "furuta_paper_r",
             "env_fn": make_env_r,
-            "env_fn_disc": make_env_r_disc,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_r),
             "max_ep_len": 501,
         },
         {
             "name": "furuta_paper_norm",
             "env_fn": make_env_norm,
-            "env_fn_disc": make_env_norm_disc,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_norm),
             "max_ep_len": 501,
         },
         {
