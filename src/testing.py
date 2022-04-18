@@ -188,9 +188,15 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
 
     render_type (string): one of ["def", "3d"]
     """
+    from custom_envs.furuta_swing_up_eval import FurutaPendulumEnvEvalWrapper
+
     max_ep_len = env_dict['max_ep_len']
     env_fn = env_dict['env_fn'] if alg_dict['continuous'] else env_dict['env_fn_disc']
     output_dir = get_output_dir(alg_dict['name'], arch_dict['name'], env_dict['name'], seed)
+
+    is_furuta_env = env_dict['name'].find('furuta') >= 0
+    independent_furuta_data = None
+
     use_def_render = (render_type=="def")
     use_3d_render = (render_type=="3d")
     if not use_def_render and not use_3d_render:
@@ -204,6 +210,8 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
                                                           itr if itr >=0 else 'last',
                                                           False,  # Deterministic true/false. Only used by the SAC algorithm.
                                                           force_disc)
+        if is_furuta_env:
+            env = FurutaPendulumEnvEvalWrapper(env=env)
         if use_3d_render:
             try:
                 env.collect_data()
@@ -215,6 +223,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
         if use_3d_render:
             collected_data = env.get_data()
         env.close()
+        independent_furuta_data = None if not is_furuta_env else env.get_internal_rewards()
 
     elif alg_dict['type'] == 'baselines':
         with tf.Graph().as_default():
@@ -229,6 +238,8 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             env = DummyVecEnv(env_fns=[env_fn], max_ep_len=max_ep_len, collect_data=use_3d_render)
             use_def_render = not env.collect_data # True if data will be collected
             use_3d_render = not use_def_render
+            if is_furuta_env:
+                env = FurutaPendulumEnvEvalWrapper(env=env)
             obs = env.reset()
 
             state = model.initial_state if hasattr(model, 'initial_state') else None
@@ -256,28 +267,37 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             collected_data = env.get_data()
             env.close()
             tf_util.get_session().close()
+            independent_furuta_data = None if not is_furuta_env else env.get_internal_rewards()
 
     elif alg_dict['type'] == 'slm':
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation'], use_torch=True), 
                                      arch_dict=arch_dict, env_dict=env_dict, output_dir=output_dir, xtra_args=True)
-        collected_data = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=max_ep_len, 
-                                            min_env_interactions=2*max_ep_len, logger_kwargs=dict(), seed=0, mode='enjoy', collect_data=use_3d_render)
+        collected_data, independent_furuta_data = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, 
+                                                                     steps_per_epoch=max_ep_len, min_env_interactions=2*max_ep_len, 
+                                                                     logger_kwargs=dict(), seed=0, mode='enjoy', collect_data=use_3d_render, 
+                                                                     is_furuta_env=is_furuta_env)
 
     elif alg_dict['type'] == 'rlil':
         from deps.pytorch_rl_il.dansah_custom.watch_continuous import evaluate_algorithm
         act_func = get_activation_by_name(arch_dict['activation'], use_torch=True)
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=act_func, arch_dict=arch_dict, env_dict=env_dict,
                                      output_dir=output_dir, xtra_args=True)
-        collected_data = evaluate_algorithm(env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, min_env_interactions=2*max_ep_len, seed=0, collect_data=use_3d_render)
+        collected_data, independent_furuta_data = evaluate_algorithm(env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, 
+                                                                     min_env_interactions=2*max_ep_len, seed=0, collect_data=use_3d_render,
+                                                                     is_furuta_env=is_furuta_env)
 
     else:
         raise NotImplementedError("No handler for algorithm type %s" % (alg_dict['type']))
     
-    if use_3d_render and collected_data is not None:
+    if use_3d_render and is_furuta_env:
+        assert collected_data is not None, "No data was collected for rendering!"
         from deps.visualizer.visualizer import plot_animated
-        for plot_data in collected_data:
+        for plot_data in collected_data: # TODO: Visualize the best episode?
             plot_animated(phis=plot_data["phis"], thetas=plot_data["thetas"], l_arm=1.0, l_pendulum=1.0, frame_rate=50, save_as=get_video_filepath())
-            return
+            break
+    
+    if is_furuta_env:
+        print("Independently defined evaluation data:", independent_furuta_data)
 
 
 #########################

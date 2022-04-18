@@ -64,6 +64,12 @@ class EnvWrapper():
         self.manual_total_reward = False
         self.ep_len_counter = 0
         self._showed_note = False
+
+        try:
+            # Pass-through of Furuta Pendulum member variables.
+            self.DT = self.env.DT
+        except:
+            pass
     
     # Copied from base.py in src\deps\SLM_Lab\slm_lab\env
     def _get_observable_dim(self, observation_space):
@@ -148,3 +154,8 @@ class EnvWrapper():
     # Originally from openai.py in src\deps\SLM_Lab\slm_lab\env
     def close(self):
         self.env.close()
+    
+
+    # Used for evaluation of Furuta Pendulum environments.
+    def _get_internal_state(self):
+        return self.env._get_internal_state()

@@ -62,6 +62,13 @@ class GymEnvironment(Environment):
                 self.collect_data = True
             except:
                 print("WARNING: The environment does not support collecting data. Default rendering will be used.")
+        
+        try:
+            # Pass-through of Furuta Pendulum member variables.
+            self.DT = self.env.DT
+        except:
+            pass
+
 
     def set_append_time(self, append_time):
         self._append_time = append_time
@@ -205,3 +212,8 @@ class GymEnvironment(Environment):
         else:
             return torch.tensor([reward], dtype=torch.float32,
                                 device=self.device)
+
+
+    # Used for evaluation of Furuta Pendulum environments.
+    def _get_internal_state(self):
+        return self.env._get_internal_state()
