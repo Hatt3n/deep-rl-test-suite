@@ -292,9 +292,9 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
     if use_3d_render and is_furuta_env:
         assert collected_data is not None, "No data was collected for rendering!"
         from deps.visualizer.visualizer import plot_animated
-        for plot_data in collected_data: # TODO: Visualize the best episode?
-            plot_animated(phis=plot_data["phis"], thetas=plot_data["thetas"], l_arm=1.0, l_pendulum=1.0, frame_rate=50, save_as=get_video_filepath())
-            break
+        best_episode_idx = np.argmax(independent_furuta_data) # Visualize the best episode
+        plot_data = collected_data[best_episode_idx]
+        plot_animated(phis=plot_data["phis"], thetas=plot_data["thetas"], l_arm=1.0, l_pendulum=1.0, frame_rate=50, save_as=get_video_filepath())
     
     if is_furuta_env:
         print("Independently defined evaluation data:", independent_furuta_data)
