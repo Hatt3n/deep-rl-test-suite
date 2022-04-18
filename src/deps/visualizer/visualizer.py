@@ -138,7 +138,7 @@ def plot_animated(phis, thetas,
     N_FRAMES = len(phis)
 
     if ts is None:
-        ts = [float((i+1) / frame_rate) for i in range(N_FRAMES)] # Modified to divide by frame_rate. @dansah
+        ts = [float(i / frame_rate) for i in range(N_FRAMES)] # Modified to divide by frame_rate and start at 0. @dansah
 
     if us is None:
         us = [0.0] * N_FRAMES
