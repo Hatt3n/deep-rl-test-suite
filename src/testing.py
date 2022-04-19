@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-04-17
+Last edit: 2022-04-19
 By: dansah
 """
 
@@ -24,6 +24,7 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 import numpy as np
 import os
+import pickle
 
 # CPU-Only <- Can result in better performance
 #import os
@@ -298,6 +299,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
     
     if is_furuta_env:
         print("Independently defined evaluation data:", independent_furuta_data)
+        return independent_furuta_data
 
 
 #########################
@@ -348,6 +350,14 @@ def get_video_filepath():
         return os.path.join(BASE_DIR, "test_movie")
     else:
         return None
+
+def get_table_data_filepath():
+    """
+    Returns the relative filepath at which the
+    table containing evaluation data for Furuta Pendulum
+    environments should be stored.
+    """
+    return os.path.join(BASE_DIR, "eval_table")
 
 def get_activation_by_name(activation_name, use_torch=True):
     """
@@ -534,13 +544,23 @@ def main():
 
     if DO_POLICY_TEST:
         seed = seeds[0]
+        eval_table = dict()
         for env_dict in envs:
-            for alg_dict in algorithms:
-                alg_name = alg_dict['name']
-                annonuce_message("Now testing %s in environment %s with seeds %s" % (alg_name, env_dict['name'], seed))
-                for arch_dict in architectures:
-                    heads_up_message("Using arch %s" % (arch_dict['name']))
-                    evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type=RENDER_TYPE)
+            is_furuta_env = env_dict['name'].find('furuta') >= 0
+            if is_furuta_env:
+                eval_table[env_dict['name']] = dict()
+            for arch_dict in architectures:
+                if is_furuta_env:
+                    eval_table[env_dict['name']][arch_dict['name']] = dict()
+                annonuce_message("Now testing %s in environment %s with seed %s" % (arch_dict['name'], env_dict['name'], seed))
+                for alg_dict in algorithms:
+                    heads_up_message("Testing algorithm %s" % (alg_dict['name']))
+                    furuta_eval_data = evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type=RENDER_TYPE)
+                    if furuta_eval_data is not None:
+                        eval_table[env_dict['name']][arch_dict['name']][alg_dict['name']] = furuta_eval_data
+        if len(eval_table.keys()) > 0:
+            with open(get_table_data_filepath(), "wb") as f:
+                pickle.dump(eval_table, f)
 
     if DO_PLOTS:
         res_maker_dict = dict()
@@ -560,9 +580,28 @@ def main():
                 annonuce_message("Analyzing metrics for environment %s" % env_name)
                 metrics = ['Performance']
                 fname=get_diagram_filepath(env_name, arch_name)
-                res_maker_dict[env_name][arch_name]["Performance"] = fname
+                res_maker_dict[env_name][arch_name] = {"diagrams": {"Performance": fname}}
                 plot.make_plots(dirs, legend=alg_names, xaxis='TotalEnvInteracts', values=metrics, count=False, 
                                 smooth=1, select=None, exclude=None, estimator='mean', fname=fname)
+        eval_table = None
+        try:
+            with open(get_table_data_filepath(), "rb") as f:
+                eval_table = pickle.load(f)
+        except:
+            print("NOTE: Could not load evaluation table data. Run an evaluation on the Furuta environments to generate it.")
+        # Process eval. table data.
+        if eval_table is not None:
+            for env_name in eval_table:
+                for arch_name in eval_table[env_name]:
+                    eval_2d_table_data = [["Alg", "Mean", "Std"]]
+                    for alg_name in eval_table[env_name][arch_name]:
+                        furuta_eval_data = eval_table[env_name][arch_name][alg_name]
+                        eval_2d_table_data.append([alg_name, np.mean(furuta_eval_data), np.std(furuta_eval_data)])
+                    try:
+                        res_maker_dict[env_name][arch_name]["tables"] = {"Independent evaluation data": eval_2d_table_data}
+                    except:
+                        print("ERROR: Failed to add evaluation table for %s %s: Missing entry in result dict." % 
+                            (env_name, arch_name))
         res_file = get_res_filepath()
         make_html(res_file, res_maker_dict)
         print(res_file)
