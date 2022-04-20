@@ -19,21 +19,22 @@ def add_architecture(html_str, arch_name, diagrams_and_tables):
     for diagram_name in diagrams:
         additional_str += """<img src=\"%s\" alt=\"%s\">""" % (diagrams[diagram_name], diagram_name)
 
-    tables = diagrams_and_tables["tables"]
-    for table_name in tables:
-        additional_str += """<h4>%s</h4><table>""" % (table_name)
-        table = tables[table_name]
-        for i in range(len(table)):
-            additional_str += """<tr>"""
-            for j in range(len(table[i])):
-                if i == 0:
-                    additional_str += """<th>%s</th>""" % (table[i][j])
-                elif j == 0:
-                    additional_str += """<td>%s</td>""" % (table[i][j])
-                else:
-                    additional_str += """<td>%.3f</td>""" % (table[i][j])
-            additional_str += """</tr>"""
-        additional_str += """</table>"""
+    tables = diagrams_and_tables.get("tables")
+    if tables is not None:
+        for table_name in tables:
+            additional_str += """<h4>%s</h4><table>""" % (table_name)
+            table = tables[table_name]
+            for i in range(len(table)):
+                additional_str += """<tr>"""
+                for j in range(len(table[i])):
+                    if i == 0:
+                        additional_str += """<th>%s</th>""" % (table[i][j])
+                    elif j == 0:
+                        additional_str += """<td>%s</td>""" % (table[i][j])
+                    else:
+                        additional_str += """<td>%.3f</td>""" % (table[i][j])
+                additional_str += """</tr>"""
+            additional_str += """</table>"""
 
     return html_str + additional_str
 

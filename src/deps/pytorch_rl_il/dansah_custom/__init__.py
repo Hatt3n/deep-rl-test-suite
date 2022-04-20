@@ -7,4 +7,5 @@ REWARDS = {
     "cartpole": CartpoleReward,
     "furuta_paper_obs": FurutaPaperObsReward,
     "furuta_paper_mix": FurutaPaperMixReward,
+    "furuta_pbrs": FurutaPBRSreward,
 }

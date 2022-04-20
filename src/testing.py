@@ -5,12 +5,12 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-04-19
+Last edit: 2022-04-20
 By: dansah
 """
 
 from configs import ALGO_ENV_CONFIGS
-from testing_config import get_high_level_parameters, get_environments_algorithms_architectures_seeds, get_rendering_config
+from exp_config import get_experiment
 
 from deps.spinningup.dansah_custom import test_policy
 from deps.spinningup.dansah_custom import plot
@@ -52,7 +52,11 @@ import pickle
 #########################
 # High-level Parameters #
 #########################
-DO_TRAINING, DO_POLICY_TEST, DO_PLOTS = get_high_level_parameters()
+DO_TRAINING, DO_POLICY_TEST, DO_PLOTS = False, False, False
+ALGORITHMS_TO_USE = []
+ENVS_TO_USE = []
+ARCHS_TO_USE = []
+SEEDS_TO_USE = []
 
 #######################
 # Training parameters #
@@ -64,7 +68,7 @@ WORK_DIR = pathlib.Path().resolve()
 ####################
 # Important values #
 ####################
-RENDER_TYPE, SAVE_VIDEO = get_rendering_config()
+RENDER_TYPE, SAVE_VIDEO = "3d", False # Whether to use 3d-rendering for the Furuta environments or not / save the evaluation video.
 
 #########################
 # Environment functions #
@@ -133,6 +137,14 @@ def make_env_r():
     from custom_envs.furuta_swing_up_paper_r import FurutaPendulumEnvPaperRecurrent
     return FurutaPendulumEnvPaperRecurrent()
 
+def make_env_pbrs():
+    """
+    Creates a Furuta Pendulum environment (swing-up) where the base
+    reward is sparse, and PBRS is used to densify it. Early stopping
+    is also utilized.
+    """
+    from custom_envs.furuta_swing_up_pbrs import FurutaPendulumEnvPBRS
+    return FurutaPendulumEnvPBRS()
 
 ######################
 # Training functions #
@@ -297,7 +309,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
         best_episode_idx = np.argmax(independent_furuta_data) # Visualize the best episode
         plot_data = collected_data[best_episode_idx]
         plot_animated(phis=plot_data["phis"], thetas=plot_data["thetas"], l_arm=1.0, l_pendulum=1.0, 
-                      frame_rate=50, name=name, save_as=get_video_filepath())
+                      frame_rate=50, name=name, save_as=get_video_filepath(name))
     
     if is_furuta_env:
         print("Independently defined evaluation data:", independent_furuta_data)
@@ -342,14 +354,14 @@ def get_res_filepath():
     """
     return os.path.join(WORK_DIR, "out", "res.html")
 
-def get_video_filepath():
+def get_video_filepath(name):
     """
     Returns the relative filepath, excluding extension, that is
     used by default for saving evaluation videos. None is
     returned when SAVE_VIDEO is False.
     """
     if SAVE_VIDEO:
-        return os.path.join(BASE_DIR, "test_movie")
+        return os.path.join(BASE_DIR, name)
     else:
         return None
 
@@ -440,6 +452,12 @@ def main():
             "max_ep_len": 501,
         },
         {
+            "name": "furuta_pbrs",
+            "env_fn": make_env_pbrs,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_pbrs),
+            "max_ep_len": 501,
+        },
+        {
             "name": "cartpole",
             "env_fn": make_cartpole_env,
             "env_fn_disc": make_cartpole_env,
@@ -523,11 +541,10 @@ def main():
             "activation": "relu"
         },
     ]
-    envs_to_use, algorithms_to_use, architecture_to_use, seeds = get_environments_algorithms_architectures_seeds()
 
-    envs = get_dicts_in_list_matching_names(envs_to_use, all_environments)
-    algorithms = get_dicts_in_list_matching_names(algorithms_to_use, all_algorithms)
-    architectures = get_dicts_in_list_matching_names(architecture_to_use, all_architectures)
+    envs = get_dicts_in_list_matching_names(ENVS_TO_USE, all_environments)
+    algorithms = get_dicts_in_list_matching_names(ALGORITHMS_TO_USE, all_algorithms)
+    architectures = get_dicts_in_list_matching_names(ARCHS_TO_USE, all_architectures)
 
     if DO_TRAINING:
         for env_dict in envs:
@@ -540,12 +557,12 @@ def main():
                     raise NotImplementedError("No configuration found for %s with the environment %s" % (alg_name, env_name))
                 annonuce_message("Now training with %s in environment %s" % (alg_name, env_name))
                 for arch_dict in architectures:
-                    for seed in seeds:
+                    for seed in SEEDS_TO_USE:
                         heads_up_message("Using arch %s and seed %s" % (arch_dict['name'], seed))
                         train_algorithm(alg_dict, arch_dict, env_dict, seed)
 
     if DO_POLICY_TEST:
-        seed = seeds[0]
+        seed = SEEDS_TO_USE[0]
         eval_table = dict()
         for env_dict in envs:
             is_furuta_env = env_dict['name'].find('furuta') >= 0
@@ -576,7 +593,7 @@ def main():
                 res_maker_dict[env_name][arch_name] = dict()
                 for alg_dict in algorithms:    
                     alg_name = alg_dict['name']
-                    for seed in seeds:
+                    for seed in SEEDS_TO_USE:
                         alg_names.append(alg_name)
                         dirs.append(get_output_dir(alg_name, arch_name, env_name, seed))
                 annonuce_message("Analyzing metrics for environment %s" % env_name)
@@ -612,4 +629,52 @@ def main():
 
 
 if __name__ == "__main__":
+    import argparse
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("-t", "--train", action="store_true", help="Perform training")
+    argparser.add_argument("-e", "--eval", action="store_true", help="Perform evaluation")
+    argparser.add_argument("-p", "--plot", action="store_true", help="Produce plots")
+    argparser.add_argument("-v", "--video", action="store_true", help="Save 3d-video")
+    argparser.add_argument("-a", "--algs", nargs='*', help="The algorithms to use")
+    argparser.add_argument("-n", "--envs", nargs='*', help="The environments to use")
+    argparser.add_argument("-r", "--arch", nargs='*', help="The architectures to use")
+    argparser.add_argument("-s", "--seeds", nargs='*', help="The seeds to use")
+    argparser.add_argument("-x", "--exp", help="Specify an experiment to run")
+    args = argparser.parse_args()
+
+    if args.train:
+        DO_TRAINING = True
+
+    if args.eval:
+        DO_POLICY_TEST = True
+
+    if args.plot:
+        DO_PLOTS = True
+    
+    if args.video:
+        SAVE_VIDEO = True
+
+    if args.algs:
+        if len(args.algs) == 1 and args.algs[0] == 'all':
+            ALGORITHMS_TO_USE = ["rs_mpc", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
+        else:
+            ALGORITHMS_TO_USE = args.algs
+
+    if args.envs:
+        ENVS_TO_USE = args.envs
+
+    if args.arch:
+        ARCHS_TO_USE = args.arch
+    else:
+        ARCHS_TO_USE = ["64_64_relu"]
+
+    if args.seeds:
+        SEEDS_TO_USE = args.seeds
+    else:
+        SEEDS_TO_USE = [0]
+
+    if args.exp:
+        ENVS_TO_USE, ALGORITHMS_TO_USE, ARCHS_TO_USE, SEEDS_TO_USE = get_experiment(args.exp)
+
+
     main()
