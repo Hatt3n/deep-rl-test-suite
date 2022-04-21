@@ -104,8 +104,32 @@ algo_env_configs = {
             },
         },
         "dqn": {
-            "training_frequency": 4008,
+            "training_frequency": 2004,
             "log_frequency": 4100,
+            "specific": {                   # Based on SLM_Lab spec-file "dqn_cartpole.json"
+                "training_start_step": 4008,
+                "explore_var_spec": {
+                    "start_val": 3.0,
+                    "end_val": 0.1,
+                    "end_step": 12000,
+                },
+                "memory": {
+                    "max_size": 30000,
+                    "use_cer": False,
+                },
+                "action_pdtype": "Categorical",
+                "action_policy": "boltzmann",
+                "clip_grad_val": 0.5,
+                "lr_scheduler_spec": {
+                    "name": "StepLR",
+                    "step_size": 500,
+                    "gamma": 0.9,
+                },
+                "net_update_type": "replace",
+                "net_update_frequency": 10,
+                "training_batch_iter": 2,
+                "training_iter": 2,
+            },
         },
         "ppo": {
             "training_frequency": 4008,

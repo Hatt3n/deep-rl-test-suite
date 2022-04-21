@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-04-20
+Last edit: 2022-04-21
 By: dansah
 """
 
@@ -61,7 +61,7 @@ SEEDS_TO_USE = []
 #######################
 # Training parameters #
 #######################
-MIN_ENV_INTERACTIONS = 100000                   # The minimum number of interactions the agents should perform before stopping training.
+MIN_ENV_INTERACTIONS = None                     # The minimum number of interactions the agents should perform before stopping training.
 BASE_DIR = os.path.join('.', 'out%s' % os.sep)  # The base directory for storing the output of the algorithms.
 WORK_DIR = pathlib.Path().resolve()
 
@@ -641,6 +641,7 @@ if __name__ == "__main__":
     argparser.add_argument("-n", "--envs", nargs='*', help="The environments to use")
     argparser.add_argument("-r", "--arch", nargs='*', help="The architectures to use")
     argparser.add_argument("-s", "--seeds", nargs='*', help="The seeds to use")
+    argparser.add_argument("-i", "--inter", type=int, help="The number of interactions to target")
     argparser.add_argument("-x", "--exp", help="Specify an experiment to run")
     args = argparser.parse_args()
 
@@ -675,8 +676,12 @@ if __name__ == "__main__":
     else:
         SEEDS_TO_USE = [0]
 
+    if args.inter:
+        MIN_ENV_INTERACTIONS = args.inter
+    else:
+        MIN_ENV_INTERACTIONS = 100000
+
     if args.exp:
         ENVS_TO_USE, ALGORITHMS_TO_USE, ARCHS_TO_USE, SEEDS_TO_USE = get_experiment(args.exp)
-
 
     main()
