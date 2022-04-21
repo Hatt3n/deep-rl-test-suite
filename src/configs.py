@@ -35,31 +35,31 @@ algo_env_configs = {
             },
         },
         "dqn": {
-            "training_frequency": 8,        # Value from SLM_Lab spec-file "dqn_cartpole.json"
+            "training_frequency": 4,        # Value from SLM_Lab spec-file "dqn_cartpole.json"
             "log_frequency": 400,           # How often logging should be performed. NOTE: Must be >= max(training_frequency, max_ep_len)
             "specific": {                   # NOTE: These are algorithm-specific parameters, i.e. not all algorithms use them.
                 "training_start_step": 32,  # Value from SLM_Lab spec-file "dqn_cartpole.json"
                 "explore_var_spec": {       # All from SLM_Lab spec-file "dqn_cartpole.json"
-                    "start_val": 3.0,
-                    "end_val": 0.1,
+                    "start_val": 5.0,
+                    "end_val": 0.5,
                     "end_step": 4000,
                 },
                 "memory": {                 # All from SLM_Lab spec-file "dqn_cartpole.json"
                     "max_size": 10000,
-                    "use_cer": True,
+                    "use_cer": False,
                 },
                 "action_pdtype": "Categorical",
                 "action_policy": "boltzmann",
-                "clip_grad_val": None,
+                "clip_grad_val": 0.5,
                 "lr_scheduler_spec": {
                     "name": "StepLR",
                     "step_size": 500,
                     "gamma": 0.9,
                 },
-                "net_update_type": "polyak",
-                "net_update_frequency": 1,
-                "training_batch_iter": 3,
-                "training_iter": 4,
+                "net_update_type": "replace",
+                "net_update_frequency": 10,
+                "training_batch_iter": 2,
+                "training_iter": 2,
             },
         },
         "ppo": {
