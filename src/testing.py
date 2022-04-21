@@ -210,6 +210,8 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
     is_furuta_env = env_dict['name'].find('furuta') >= 0
     independent_furuta_data = None
 
+    num_episodes = 5
+
     use_def_render = (render_type=="def")
     use_3d_render = (render_type=="3d")
     if not use_def_render and not use_3d_render:
@@ -232,7 +234,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
                 print("WARNING: The environment does not support collecting data. Default rendering will be used.")
                 use_3d_render = False
                 use_def_render = True
-        test_policy.run_policy(env, get_action, max_ep_len=max_ep_len, num_episodes=2, render=use_def_render)
+        test_policy.run_policy(env, get_action, max_ep_len=max_ep_len, num_episodes=num_episodes, render=use_def_render)
         if use_3d_render:
             collected_data = env.get_data()
         env.close()
@@ -248,18 +250,18 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             from baselines.common import tf_util
             from deps.baselines.dansah_custom.dummy_vec_env import DummyVecEnv
             logger.log("Running trained model")
+            if is_furuta_env:
+                _env = env_fn()
+                env_fn = lambda : FurutaPendulumEnvEvalWrapper(env=_env)
             env = DummyVecEnv(env_fns=[env_fn], max_ep_len=max_ep_len, collect_data=use_3d_render)
             use_def_render = not env.collect_data # True if data will be collected
             use_3d_render = not use_def_render
-            if is_furuta_env:
-                env = FurutaPendulumEnvEvalWrapper(env=env)
             obs = env.reset()
 
             state = model.initial_state if hasattr(model, 'initial_state') else None
             dones = np.zeros((1,))
 
             current_episode = 0
-            num_episodes = 2
             episode_rew = np.zeros(env.num_envs) if isinstance(env, VecEnv) else np.zeros(1)
             while current_episode < num_episodes:
                 if state is not None:
@@ -280,13 +282,13 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             collected_data = env.get_data()
             env.close()
             tf_util.get_session().close()
-            independent_furuta_data = None if not is_furuta_env else env.get_internal_rewards()
+            independent_furuta_data = None if not is_furuta_env else env.envs[0].get_internal_rewards()
 
     elif alg_dict['type'] == 'slm':
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation'], use_torch=True), 
                                      arch_dict=arch_dict, env_dict=env_dict, output_dir=output_dir, xtra_args=True)
         collected_data, independent_furuta_data = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, 
-                                                                     steps_per_epoch=max_ep_len, min_env_interactions=2*max_ep_len, 
+                                                                     steps_per_epoch=max_ep_len, num_episodes=num_episodes, 
                                                                      logger_kwargs=dict(), seed=0, mode='enjoy', collect_data=use_3d_render, 
                                                                      is_furuta_env=is_furuta_env)
 
@@ -296,7 +298,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=act_func, arch_dict=arch_dict, env_dict=env_dict,
                                      output_dir=output_dir, xtra_args=True)
         collected_data, independent_furuta_data = evaluate_algorithm(env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, 
-                                                                     min_env_interactions=2*max_ep_len, seed=0, collect_data=use_3d_render,
+                                                                     num_episodes=num_episodes, seed=0, collect_data=use_3d_render,
                                                                      is_furuta_env=is_furuta_env)
 
     else:

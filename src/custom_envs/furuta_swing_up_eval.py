@@ -138,7 +138,7 @@ class FurutaPendulumEnvEvalWrapper(gym.core.Env):
         """
         Returns an array of the returns for all episodes.
         """
-        return self.internal_rewards
+        return self.internal_rewards[:-1] # Excludes any unfinished episode
 
 
     # More pass-through below.

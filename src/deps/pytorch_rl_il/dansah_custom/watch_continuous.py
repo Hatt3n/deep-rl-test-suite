@@ -10,7 +10,7 @@ from .gym_env import GymEnvironment
 from deps.pytorch_rl_il.dansah_custom.rs_mpc_launcher import rs_mpc_preset
 from .util import get_log_dir, load_buffer_args
 
-def evaluate_algorithm(env_fn, ac_kwargs, max_ep_len, min_env_interactions=1000, seed=0, fps=None, collect_data=False,
+def evaluate_algorithm(env_fn, ac_kwargs, max_ep_len, num_episodes=5, seed=0, fps=None, collect_data=False,
                        is_furuta_env=False):
     """
     Evaluates the trained rs_mpc agent specified by the output directory parameter,
@@ -34,29 +34,30 @@ def evaluate_algorithm(env_fn, ac_kwargs, max_ep_len, min_env_interactions=1000,
     agent.load(log_dir)
 
     # Evaluate
-    watch(agent, env, min_env_interactions, fps=fps, collect_data=collect_data, eval=True)
+    watch(agent, env, num_episodes, fps=fps, collect_data=collect_data, eval=True)
     env.close()
     return env.get_data(), None if not is_furuta_env else env.get_internal_rewards()
 
-def watch(agent, env, min_env_interactions, fps=None, collect_data=False, eval=True):
+def watch(agent, env, num_episodes, fps=None, collect_data=False, eval=True):
     action = None
-    returns = 0
+    returns = None
     # have to call this before initial reset for pybullet envs
     if "Bullet" in env.name and not collect_data:
         env.render(mode="human")
-    frames = 0
-    while frames < min_env_interactions:
+    episode = 0
+    while episode < num_episodes:
         if fps is not None and not collect_data:
             time.sleep(1 / fps)
         if env.done:
             lazy_agent = agent.make_lazy_agent(evaluation=eval)
             lazy_agent.set_replay_buffer(env)
-            print('returns: {}'.format(returns))
+            if returns is not None:
+                print('returns: {}'.format(returns))
+                episode += 1
             env.reset()
             returns = 0
         else:
             env.step(action)
-            frames += 1
         if not collect_data:
             env.render()
         action = lazy_agent.act(env.state, env.reward)

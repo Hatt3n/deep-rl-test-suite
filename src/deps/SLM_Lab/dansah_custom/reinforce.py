@@ -22,7 +22,7 @@ import os
 
 logger = logger.get_logger(__name__)
 
-def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, 
+def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
               epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train', collect_data=False,
               is_furuta_env=False):
     """
@@ -114,7 +114,7 @@ def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
         env = FurutaPendulumEnvEvalWrapper(env=env)
     agent = Agent(spec, Body(env, spec))
 
-    SLM_Trainer(agent, env, spec).run_rl(logger_kwargs=logger_kwargs)
+    SLM_Trainer(agent, env, spec).run_rl(num_episodes=num_episodes, logger_kwargs=logger_kwargs)
     collected_data = env.get_data()
     env.close()
     return collected_data, None if not is_furuta_env else env.get_internal_rewards()
