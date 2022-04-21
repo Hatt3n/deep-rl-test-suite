@@ -69,6 +69,12 @@ algo_env_configs = {
         "a2c": {
             "training_frequency": 4008,     # How often updates are performed. NOTE: Could be in terms of experiences or episodes; this depends on the algorithm.
             "log_frequency": 4100,
+            "specific": {
+                "lr": 5e-3,
+                "max_grad_norm": None,
+                "vf_coef": 0.8, 
+                "ent_coef": 0.01,
+            },
         },
         "a2c_s": {
             "training_frequency": 4008,
