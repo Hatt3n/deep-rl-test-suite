@@ -17,12 +17,13 @@ class DiscretizingEnvironmentWrapper(gym.core.Env):
     values in the discrete action space is controlled by 'n'.
     """
 
-    def __init__(self, env_fn, n=11):
+    def __init__(self, env_fn, n=15, disc_type='exp'):
         """
         Set important attributes related to the discretization, and pass through required Gym-related attributes.
         Args:
             env_fn (func): creates a new instance of the environment to be discretized.
             n (int): the number of values to include in the discrete action space.
+            disc_type (string): 'exp' for exponential, 'linear' for linear.
         """
         self.env = env_fn()
 
@@ -34,6 +35,13 @@ class DiscretizingEnvironmentWrapper(gym.core.Env):
         self.action_space = spaces.Discrete(self.n)
         self.observation_space = self.env.observation_space
         self.is_discrete = True # Used by SLM Lab
+        
+        # Configure discretisation
+        self.disc_type = disc_type
+        if self.disc_type == 'exp':
+            self._max_exp = np.log2(self.env.action_space.high[0]) # Assumes low * -1 == high
+        self._low = self.env.action_space.low[0]
+        self._high = self.env.action_space.high[0]
 
         # Optional for OpenAI Gym
         self.metadata = self.env.metadata
@@ -47,6 +55,7 @@ class DiscretizingEnvironmentWrapper(gym.core.Env):
         
     def seed(self, seed=None): # Not needed in modern versions of OpenAI Gym
         return self.env.seed(seed=seed)
+
 
     def step(self, action):
         """
@@ -64,8 +73,23 @@ class DiscretizingEnvironmentWrapper(gym.core.Env):
         Works like the usual step-function, but maps the discrete action value
         to a continuous one first.
         """
-        continuous_action = np.array([self.env.action_space.low[0] + action*(2 * self.env.action_space.high[0] / (self.n - 1))]) # The regular environment expects an array
+        if self.disc_type == 'linear':
+            continuous_action = np.array([self.env.action_space.low[0] + action*(2 * self.env.action_space.high[0] / (self.n - 1))]) # The regular environment expects an array
+        elif self.disc_type == 'exp':
+            mid = int(self.n // 2)
+            if action == mid:
+                prop_val = 0
+            elif action < mid:
+                prop_val = -2**((1.0 - action / mid)*self._max_exp)
+                prop_val = max(prop_val, self._low)
+            else:
+                prop_val = 2**((action / mid - 1.0)*self._max_exp)
+                prop_val = min(prop_val, self._high)
+            continuous_action = np.array([prop_val])
+        else:
+            raise NotImplementedError("Unknown discretisation type %s" % self.disc_type)
         return self.env.step(action=continuous_action)
+
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
         """
@@ -75,6 +99,7 @@ class DiscretizingEnvironmentWrapper(gym.core.Env):
             observation (object): the initial observation.
         """
         return self.env.reset(seed=seed, options=options)
+
 
     def render(self, mode="human"):
         """
@@ -86,6 +111,7 @@ class DiscretizingEnvironmentWrapper(gym.core.Env):
           and ANSI escape sequences (e.g. for colors).
         """
         return self.env.render(mode=mode)
+
 
     def close(self):
         """
