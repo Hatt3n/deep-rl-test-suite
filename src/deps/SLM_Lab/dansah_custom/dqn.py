@@ -15,9 +15,9 @@ import torch
 logger = logger.get_logger(__name__)
 
 
-def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, 
+def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
         epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train', collect_data=False,
-        training_start_step=-1, explore_var_spec=None, memory=None, action_pdtype="Categorical", 
+        training_start_step=-1, explore_var_spec=None, memory=None, is_furuta_env=False, action_pdtype="Categorical", 
         action_policy="boltzmann", clip_grad_val=0.5, lr_scheduler_spec=None, 
         net_update_type="replace", net_update_frequency=10, training_batch_iter=2, training_iter=2):
 
@@ -134,12 +134,15 @@ def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch,
     set_global_seed(spec)
 
     env = EnvWrapper(env_fn, spec, collect_data=collect_data)
+    if is_furuta_env:
+        from custom_envs.furuta_swing_up_eval import FurutaPendulumEnvEvalWrapper
+        env = FurutaPendulumEnvEvalWrapper(env=env)
     agent = Agent(spec, Body(env, spec))
 
-    SLM_Trainer(agent, env, spec).run_rl(logger_kwargs=logger_kwargs)
+    SLM_Trainer(agent, env, spec).run_rl(num_episodes=num_episodes, logger_kwargs=logger_kwargs)
     collected_data = env.get_data()
     env.close()
-    return collected_data
+    return collected_data, None if not is_furuta_env else env.get_internal_rewards()
 
 
 class VanillaDQN(SARSA):

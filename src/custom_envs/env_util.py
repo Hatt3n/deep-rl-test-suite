@@ -37,6 +37,12 @@ class DiscretizingEnvironmentWrapper(gym.core.Env):
 
         # Optional for OpenAI Gym
         self.metadata = self.env.metadata
+
+        try:
+            # Pass-through of Furuta Pendulum member variables.
+            self.DT = self.env.DT
+        except:
+            pass
     
         
     def seed(self, seed=None): # Not needed in modern versions of OpenAI Gym
@@ -88,3 +94,16 @@ class DiscretizingEnvironmentWrapper(gym.core.Env):
         garbage collected or when the program exits.
         """
         return self.env.close()
+
+
+    def collect_data(self):
+        return self.env.collect_data()
+
+
+    def get_data(self):
+        return self.env.get_data()
+
+
+    # Used for evaluation of Furuta Pendulum environments.
+    def _get_internal_state(self):
+        return self.env._get_internal_state()

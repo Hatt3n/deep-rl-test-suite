@@ -5,12 +5,12 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-04-12
+Last edit: 2022-04-20
 By: dansah
 """
 
 from configs import ALGO_ENV_CONFIGS
-from testing_config import get_high_level_parameters, get_environments_algorithms_architectures_seeds, get_rendering_config
+from exp_config import get_experiment
 
 from deps.spinningup.dansah_custom import test_policy
 from deps.spinningup.dansah_custom import plot
@@ -24,6 +24,7 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 import numpy as np
 import os
+import pickle
 
 # CPU-Only <- Can result in better performance
 #import os
@@ -51,7 +52,11 @@ import os
 #########################
 # High-level Parameters #
 #########################
-DO_TRAINING, DO_POLICY_TEST, DO_PLOTS = get_high_level_parameters()
+DO_TRAINING, DO_POLICY_TEST, DO_PLOTS = False, False, False
+ALGORITHMS_TO_USE = []
+ENVS_TO_USE = []
+ARCHS_TO_USE = []
+SEEDS_TO_USE = []
 
 #######################
 # Training parameters #
@@ -63,7 +68,7 @@ WORK_DIR = pathlib.Path().resolve()
 ####################
 # Important values #
 ####################
-RENDER_TYPE, SAVE_VIDEO = get_rendering_config()
+RENDER_TYPE, SAVE_VIDEO = "3d", False # Whether to use 3d-rendering for the Furuta environments or not / save the evaluation video.
 
 #########################
 # Environment functions #
@@ -115,15 +120,6 @@ def make_env_obs():
     from custom_envs.furuta_swing_up_paper_obs import FurutaPendulumEnvPaperObs
     return FurutaPendulumEnvPaperObs()
 
-def make_env_obs_disc():
-    """
-    Creates a new Furuta Pendulum environment (swing-up),
-    where the observed state includes theta and the action
-    space is discrete.
-    """
-    from custom_envs.env_util import DiscretizingEnvironmentWrapper
-    return DiscretizingEnvironmentWrapper(make_env_obs)
-
 def make_env_mix():
     """
     Creates a new Furuta Pendulum Mix environment (swing-up),
@@ -133,31 +129,6 @@ def make_env_mix():
     from custom_envs.furuta_swing_up_mix import FurutaPendulumEnvPaperMix
     return FurutaPendulumEnvPaperMix()
 
-def make_env_mix_disc():
-    """
-    Creates a new Furuta Pendulum Mix environment (swing-up),
-    where the action space is discrete.
-    """
-    from custom_envs.env_util import DiscretizingEnvironmentWrapper
-    return DiscretizingEnvironmentWrapper(make_env_mix)
-
-def make_env_disc():
-    """
-    Creates a new Furuta Pendulum environment (swing-up),
-    where the action space is discrete.
-    """
-    from custom_envs.env_util import DiscretizingEnvironmentWrapper
-    return DiscretizingEnvironmentWrapper(make_env)
-
-def make_env_norm_disc():
-    """
-    Creates a new Furuta Pendulum environment (swing-up),
-    where the action space is discrete, and the states and
-    rewards are (to an extent) normalized.
-    """
-    from custom_envs.env_util import DiscretizingEnvironmentWrapper
-    return DiscretizingEnvironmentWrapper(make_env_norm)
-
 def make_env_r():
     """
     Creates a new Furuta Pendulum environment (swing-up),
@@ -166,15 +137,14 @@ def make_env_r():
     from custom_envs.furuta_swing_up_paper_r import FurutaPendulumEnvPaperRecurrent
     return FurutaPendulumEnvPaperRecurrent()
 
-def make_env_r_disc():
+def make_env_pbrs():
     """
-    Creates a new Furuta Pendulum environment (swing-up),
-    where one of the values in the observed state is the previous input to the environment
-    (the previous input being the one gotten _after_ converting the discrete output of the
-    agent to a continuous value).
+    Creates a Furuta Pendulum environment (swing-up) where the base
+    reward is sparse, and PBRS is used to densify it. Early stopping
+    is also utilized.
     """
-    from custom_envs.env_util import DiscretizingEnvironmentWrapper
-    return DiscretizingEnvironmentWrapper(make_env_r)
+    from custom_envs.furuta_swing_up_pbrs import FurutaPendulumEnvPBRS
+    return FurutaPendulumEnvPBRS()
 
 ######################
 # Training functions #
@@ -231,9 +201,17 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
 
     render_type (string): one of ["def", "3d"]
     """
+    from custom_envs.furuta_swing_up_eval import FurutaPendulumEnvEvalWrapper
+
     max_ep_len = env_dict['max_ep_len']
     env_fn = env_dict['env_fn'] if alg_dict['continuous'] else env_dict['env_fn_disc']
     output_dir = get_output_dir(alg_dict['name'], arch_dict['name'], env_dict['name'], seed)
+
+    is_furuta_env = env_dict['name'].find('furuta') >= 0
+    independent_furuta_data = None
+
+    num_episodes = 5
+
     use_def_render = (render_type=="def")
     use_3d_render = (render_type=="3d")
     if not use_def_render and not use_3d_render:
@@ -247,6 +225,8 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
                                                           itr if itr >=0 else 'last',
                                                           False,  # Deterministic true/false. Only used by the SAC algorithm.
                                                           force_disc)
+        if is_furuta_env:
+            env = FurutaPendulumEnvEvalWrapper(env=env)
         if use_3d_render:
             try:
                 env.collect_data()
@@ -254,10 +234,11 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
                 print("WARNING: The environment does not support collecting data. Default rendering will be used.")
                 use_3d_render = False
                 use_def_render = True
-        test_policy.run_policy(env, get_action, max_ep_len=max_ep_len, num_episodes=2, render=use_def_render)
+        test_policy.run_policy(env, get_action, max_ep_len=max_ep_len, num_episodes=num_episodes, render=use_def_render)
         if use_3d_render:
             collected_data = env.get_data()
         env.close()
+        independent_furuta_data = None if not is_furuta_env else env.get_internal_rewards()
 
     elif alg_dict['type'] == 'baselines':
         with tf.Graph().as_default():
@@ -269,6 +250,9 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             from baselines.common import tf_util
             from deps.baselines.dansah_custom.dummy_vec_env import DummyVecEnv
             logger.log("Running trained model")
+            if is_furuta_env:
+                _env = env_fn()
+                env_fn = lambda : FurutaPendulumEnvEvalWrapper(env=_env)
             env = DummyVecEnv(env_fns=[env_fn], max_ep_len=max_ep_len, collect_data=use_3d_render)
             use_def_render = not env.collect_data # True if data will be collected
             use_3d_render = not use_def_render
@@ -278,7 +262,6 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             dones = np.zeros((1,))
 
             current_episode = 0
-            num_episodes = 2
             episode_rew = np.zeros(env.num_envs) if isinstance(env, VecEnv) else np.zeros(1)
             while current_episode < num_episodes:
                 if state is not None:
@@ -299,28 +282,40 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             collected_data = env.get_data()
             env.close()
             tf_util.get_session().close()
+            independent_furuta_data = None if not is_furuta_env else env.envs[0].get_internal_rewards()
 
     elif alg_dict['type'] == 'slm':
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation'], use_torch=True), 
                                      arch_dict=arch_dict, env_dict=env_dict, output_dir=output_dir, xtra_args=True)
-        collected_data = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, steps_per_epoch=max_ep_len, 
-                                            min_env_interactions=2*max_ep_len, logger_kwargs=dict(), seed=0, mode='enjoy', collect_data=use_3d_render)
+        collected_data, independent_furuta_data = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, 
+                                                                     steps_per_epoch=max_ep_len, num_episodes=num_episodes, 
+                                                                     logger_kwargs=dict(), seed=0, mode='enjoy', collect_data=use_3d_render, 
+                                                                     is_furuta_env=is_furuta_env)
 
     elif alg_dict['type'] == 'rlil':
         from deps.pytorch_rl_il.dansah_custom.watch_continuous import evaluate_algorithm
         act_func = get_activation_by_name(arch_dict['activation'], use_torch=True)
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=act_func, arch_dict=arch_dict, env_dict=env_dict,
                                      output_dir=output_dir, xtra_args=True)
-        collected_data = evaluate_algorithm(env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, min_env_interactions=2*max_ep_len, seed=0, collect_data=use_3d_render)
+        collected_data, independent_furuta_data = evaluate_algorithm(env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, 
+                                                                     num_episodes=num_episodes, seed=0, collect_data=use_3d_render,
+                                                                     is_furuta_env=is_furuta_env)
 
     else:
         raise NotImplementedError("No handler for algorithm type %s" % (alg_dict['type']))
     
-    if use_3d_render and collected_data is not None:
+    if use_3d_render and is_furuta_env:
+        assert collected_data is not None, "No data was collected for rendering!"
         from deps.visualizer.visualizer import plot_animated
-        for plot_data in collected_data:
-            plot_animated(phis=plot_data["phis"], thetas=plot_data["thetas"], l_arm=1.0, l_pendulum=1.0, frame_rate=50, save_as=get_video_filepath())
-            return
+        name = "%s - %s" % (alg_dict['name'], arch_dict['name'])
+        best_episode_idx = np.argmax(independent_furuta_data) # Visualize the best episode
+        plot_data = collected_data[best_episode_idx]
+        plot_animated(phis=plot_data["phis"], thetas=plot_data["thetas"], l_arm=1.0, l_pendulum=1.0, 
+                      frame_rate=50, name=name, save_as=get_video_filepath(name))
+    
+    if is_furuta_env:
+        print("Independently defined evaluation data:", independent_furuta_data)
+        return independent_furuta_data
 
 
 #########################
@@ -361,16 +356,24 @@ def get_res_filepath():
     """
     return os.path.join(WORK_DIR, "out", "res.html")
 
-def get_video_filepath():
+def get_video_filepath(name):
     """
     Returns the relative filepath, excluding extension, that is
     used by default for saving evaluation videos. None is
     returned when SAVE_VIDEO is False.
     """
     if SAVE_VIDEO:
-        return os.path.join(BASE_DIR, "test_movie")
+        return os.path.join(BASE_DIR, name)
     else:
         return None
+
+def get_table_data_filepath():
+    """
+    Returns the relative filepath at which the
+    table containing evaluation data for Furuta Pendulum
+    environments should be stored.
+    """
+    return os.path.join(BASE_DIR, "eval_table")
 
 def get_activation_by_name(activation_name, use_torch=True):
     """
@@ -411,6 +414,7 @@ def main():
     """
     Runns all of the experiments.
     """
+    from custom_envs.env_util import DiscretizingEnvironmentWrapper
     from deps.spinningup.dansah_custom.ddpg import ddpg
     from deps.spinningup.dansah_custom.ppo import ppo
     from deps.baselines.dansah_custom.a2c import a2c
@@ -422,31 +426,37 @@ def main():
         {
             "name": "furuta_paper",
             "env_fn": make_env,
-            "env_fn_disc": make_env_disc,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env),
             "max_ep_len": 501,
         },
         {
             "name": "furuta_paper_obs",
             "env_fn": make_env_obs,
-            "env_fn_disc": make_env_obs_disc,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_obs),
             "max_ep_len": 501,
         },
         {
             "name": "furuta_paper_mix",
             "env_fn": make_env_mix,
-            "env_fn_disc": make_env_mix_disc,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_mix),
             "max_ep_len": 501,
         },
         {
             "name": "furuta_paper_r",
             "env_fn": make_env_r,
-            "env_fn_disc": make_env_r_disc,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_r),
             "max_ep_len": 501,
         },
         {
             "name": "furuta_paper_norm",
             "env_fn": make_env_norm,
-            "env_fn_disc": make_env_norm_disc,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_norm),
+            "max_ep_len": 501,
+        },
+        {
+            "name": "furuta_pbrs",
+            "env_fn": make_env_pbrs,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_pbrs),
             "max_ep_len": 501,
         },
         {
@@ -533,11 +543,10 @@ def main():
             "activation": "relu"
         },
     ]
-    envs_to_use, algorithms_to_use, architecture_to_use, seeds = get_environments_algorithms_architectures_seeds()
 
-    envs = get_dicts_in_list_matching_names(envs_to_use, all_environments)
-    algorithms = get_dicts_in_list_matching_names(algorithms_to_use, all_algorithms)
-    architectures = get_dicts_in_list_matching_names(architecture_to_use, all_architectures)
+    envs = get_dicts_in_list_matching_names(ENVS_TO_USE, all_environments)
+    algorithms = get_dicts_in_list_matching_names(ALGORITHMS_TO_USE, all_algorithms)
+    architectures = get_dicts_in_list_matching_names(ARCHS_TO_USE, all_architectures)
 
     if DO_TRAINING:
         for env_dict in envs:
@@ -550,19 +559,29 @@ def main():
                     raise NotImplementedError("No configuration found for %s with the environment %s" % (alg_name, env_name))
                 annonuce_message("Now training with %s in environment %s" % (alg_name, env_name))
                 for arch_dict in architectures:
-                    for seed in seeds:
+                    for seed in SEEDS_TO_USE:
                         heads_up_message("Using arch %s and seed %s" % (arch_dict['name'], seed))
                         train_algorithm(alg_dict, arch_dict, env_dict, seed)
 
     if DO_POLICY_TEST:
-        seed = seeds[0]
+        seed = SEEDS_TO_USE[0]
+        eval_table = dict()
         for env_dict in envs:
-            for alg_dict in algorithms:
-                alg_name = alg_dict['name']
-                annonuce_message("Now testing %s in environment %s with seeds %s" % (alg_name, env_dict['name'], seed))
-                for arch_dict in architectures:
-                    heads_up_message("Using arch %s" % (arch_dict['name']))
-                    evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type=RENDER_TYPE)
+            is_furuta_env = env_dict['name'].find('furuta') >= 0
+            if is_furuta_env:
+                eval_table[env_dict['name']] = dict()
+            for arch_dict in architectures:
+                if is_furuta_env:
+                    eval_table[env_dict['name']][arch_dict['name']] = dict()
+                annonuce_message("Now testing %s in environment %s with seed %s" % (arch_dict['name'], env_dict['name'], seed))
+                for alg_dict in algorithms:
+                    heads_up_message("Testing algorithm %s" % (alg_dict['name']))
+                    furuta_eval_data = evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type=RENDER_TYPE)
+                    if furuta_eval_data is not None:
+                        eval_table[env_dict['name']][arch_dict['name']][alg_dict['name']] = furuta_eval_data
+        if len(eval_table.keys()) > 0:
+            with open(get_table_data_filepath(), "wb") as f:
+                pickle.dump(eval_table, f)
 
     if DO_PLOTS:
         res_maker_dict = dict()
@@ -576,15 +595,34 @@ def main():
                 res_maker_dict[env_name][arch_name] = dict()
                 for alg_dict in algorithms:    
                     alg_name = alg_dict['name']
-                    for seed in seeds:
+                    for seed in SEEDS_TO_USE:
                         alg_names.append(alg_name)
                         dirs.append(get_output_dir(alg_name, arch_name, env_name, seed))
                 annonuce_message("Analyzing metrics for environment %s" % env_name)
                 metrics = ['Performance']
                 fname=get_diagram_filepath(env_name, arch_name)
-                res_maker_dict[env_name][arch_name]["Performance"] = fname
+                res_maker_dict[env_name][arch_name] = {"diagrams": {"Performance": fname}}
                 plot.make_plots(dirs, legend=alg_names, xaxis='TotalEnvInteracts', values=metrics, count=False, 
                                 smooth=1, select=None, exclude=None, estimator='mean', fname=fname)
+        eval_table = None
+        try:
+            with open(get_table_data_filepath(), "rb") as f:
+                eval_table = pickle.load(f)
+        except:
+            print("NOTE: Could not load evaluation table data. Run an evaluation on the Furuta environments to generate it.")
+        # Process eval. table data.
+        if eval_table is not None:
+            for env_name in eval_table:
+                for arch_name in eval_table[env_name]:
+                    eval_2d_table_data = [["Alg", "Mean", "Std"]]
+                    for alg_name in eval_table[env_name][arch_name]:
+                        furuta_eval_data = eval_table[env_name][arch_name][alg_name]
+                        eval_2d_table_data.append([alg_name, np.mean(furuta_eval_data), np.std(furuta_eval_data)])
+                    try:
+                        res_maker_dict[env_name][arch_name]["tables"] = {"Independent evaluation data": eval_2d_table_data}
+                    except:
+                        print("ERROR: Failed to add evaluation table for %s %s: Missing entry in result dict." % 
+                            (env_name, arch_name))
         res_file = get_res_filepath()
         make_html(res_file, res_maker_dict)
         print(res_file)
@@ -593,4 +631,52 @@ def main():
 
 
 if __name__ == "__main__":
+    import argparse
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("-t", "--train", action="store_true", help="Perform training")
+    argparser.add_argument("-e", "--eval", action="store_true", help="Perform evaluation")
+    argparser.add_argument("-p", "--plot", action="store_true", help="Produce plots")
+    argparser.add_argument("-v", "--video", action="store_true", help="Save 3d-video")
+    argparser.add_argument("-a", "--algs", nargs='*', help="The algorithms to use")
+    argparser.add_argument("-n", "--envs", nargs='*', help="The environments to use")
+    argparser.add_argument("-r", "--arch", nargs='*', help="The architectures to use")
+    argparser.add_argument("-s", "--seeds", nargs='*', help="The seeds to use")
+    argparser.add_argument("-x", "--exp", help="Specify an experiment to run")
+    args = argparser.parse_args()
+
+    if args.train:
+        DO_TRAINING = True
+
+    if args.eval:
+        DO_POLICY_TEST = True
+
+    if args.plot:
+        DO_PLOTS = True
+    
+    if args.video:
+        SAVE_VIDEO = True
+
+    if args.algs:
+        if len(args.algs) == 1 and args.algs[0] == 'all':
+            ALGORITHMS_TO_USE = ["rs_mpc", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
+        else:
+            ALGORITHMS_TO_USE = args.algs
+
+    if args.envs:
+        ENVS_TO_USE = args.envs
+
+    if args.arch:
+        ARCHS_TO_USE = args.arch
+    else:
+        ARCHS_TO_USE = ["64_64_relu"]
+
+    if args.seeds:
+        SEEDS_TO_USE = args.seeds
+    else:
+        SEEDS_TO_USE = [0]
+
+    if args.exp:
+        ENVS_TO_USE, ALGORITHMS_TO_USE, ARCHS_TO_USE, SEEDS_TO_USE = get_experiment(args.exp)
+
+
     main()

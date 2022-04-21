@@ -36,14 +36,21 @@ class DummyVecEnv(VecEnv):
         self.collect_data = False
         if collect_data:
             try:
-                self.env.collect_data()
+                env.collect_data()
                 self.collect_data = True
             except:
                 print("WARNING: The environment does not support collecting data. Default rendering will be used.")
+        
+        self.is_discrete = env.is_discrete
+        try:
+            # Pass-through of Furuta Pendulum member variables.
+            self.DT = env.DT
+        except:
+            pass
 
     def get_data(self):
         try:
-            return self.env.get_data()
+            return self.envs[0].get_data()
         except:
             return None
 
@@ -76,11 +83,12 @@ class DummyVecEnv(VecEnv):
                 if self.ep_len_counter >= self.max_ep_len:
                     self.buf_dones[e] = True
             if self.buf_dones[e]:
-                if not self.buf_infos[e].get('episode') and self.num_envs == 1:
-                    self.buf_infos[e]['episode'] = {
-                        'r': self.total_reward,
-                        'l': self.ep_len_counter,
-                    }
+                if self.num_envs == 1:
+                    if not self.buf_infos[e].get('episode'):
+                        self.buf_infos[e]['episode'] = {
+                            'r': self.total_reward,
+                            'l': self.ep_len_counter,
+                        }
                     self.total_reward = np.float16(0)
                     self.ep_len_counter = 0
                 self.real_last_obs[e] = obs
@@ -143,3 +151,8 @@ class DummyVecEnv(VecEnv):
             env.close()
         self.close_extras()
         self.closed = True
+
+
+    # Used for evaluation of Furuta Pendulum environments.
+    def _get_internal_state(self):
+        return self.envs[0]._get_internal_state()

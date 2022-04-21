@@ -15,5 +15,4 @@ The following software must be installed before the installation can be performe
 2. Go to [src/deps/spinningup/](src/deps/spinningup/) and run `pip install -e .`
 3. Go to [src/deps/baselines/](src/deps/baselines/) and run `pip install -e .`
 4. Put ipm-python in [src/deps/](src/deps/) and rename it to ipm_python
-5. There are functions defined within functions in src/deps/ipm_python/furuta.py, which will cause the Pickler to crash. To fix this, the code must manually be rewritten so that they become stand-alone.
-6. It might be necessary to create some folders beforehand, although they should be created automatically. An example of such a directory is [out/res/]()
+5. It might be necessary to create some folders beforehand, although they should be created automatically. An example of such a directory is [out/res/]()

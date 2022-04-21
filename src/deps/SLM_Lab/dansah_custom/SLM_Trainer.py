@@ -22,8 +22,8 @@ class SLM_Trainer():
         self.index = self.spec['meta']['session']
         self.set_seed(spec)
     
-    def run_rl(self, logger_kwargs=dict()):
-        '''Run the main RL loop until clock.max_frame'''
+    def run_rl(self, num_episodes=None, logger_kwargs=dict()):
+        '''Run the main RL loop until clock.max_frame, or num_episodes if given.'''
         # Spinup logger
         do_extra_logging = util.in_train_lab_mode()
         if do_extra_logging:
@@ -34,6 +34,7 @@ class SLM_Trainer():
 
         at_least_one_done = False
         real_curr_t = 0
+        episode = 0
         # Standard
         logger.info(f'Running RL loop for trial {self.spec["meta"]["trial"]} session {self.index}')
         clock = self.env.clock
@@ -41,11 +42,14 @@ class SLM_Trainer():
         done = False
         while True:
             if done:  # before starting another episode
+                episode += 1
                 self.try_ckpt(self.agent, self.env)
                 if clock.get() < clock.max_frame:  # reset and continue
                     clock.tick('epi')
                     state = self.env.reset()
                     done = False
+                if num_episodes is not None and episode >= num_episodes:
+                    break # finish
             self.try_ckpt(self.agent, self.env)
             if clock.get() >= clock.max_frame:  # finish
                 break

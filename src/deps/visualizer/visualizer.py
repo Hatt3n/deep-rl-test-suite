@@ -115,7 +115,7 @@ def plot_static(phi, theta, l_arm=2.0, l_pendulum=1.0):
 def plot_animated(phis, thetas,
                   us=None, dphis=None, dthetas=None, ts=None,
                   l_arm=2.0, l_pendulum=1.0,
-                  frame_rate=60, save_as=None, show_extra_details=False):
+                  frame_rate=60, name=None, save_as=None, show_extra_details=False):
     """Display an animated plot of a furuta pendulum."""
 
     fig = plt.figure(figsize=(16, 9))
@@ -138,7 +138,7 @@ def plot_animated(phis, thetas,
     N_FRAMES = len(phis)
 
     if ts is None:
-        ts = [float((i+1) / frame_rate) for i in range(N_FRAMES)] # Modified to divide by frame_rate. @dansah
+        ts = [float(i / frame_rate) for i in range(N_FRAMES)] # Modified to divide by frame_rate and start at 0. @dansah
 
     if us is None:
         us = [0.0] * N_FRAMES
@@ -188,7 +188,10 @@ def plot_animated(phis, thetas,
                             ylim=(min(dthetas), max(dthetas)),
                             title="dTheta/dt",
                             color="darkgreen")
-        ax3d.set_title(f"Furuta Pendulum visualization (t = {t:.2f} seconds)")
+        if name is None:
+            ax3d.set_title(f"Furuta Pendulum visualization (t = {t:.2f} seconds)")
+        else:
+            ax3d.set_title(f"{name}\n(t = {t:.2f} seconds)")
 
     ani = animation.FuncAnimation(
         fig,
