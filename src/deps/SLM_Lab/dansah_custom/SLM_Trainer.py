@@ -115,6 +115,7 @@ class SLM_Trainer():
             body.ckpt(self.env, 'train')
             body.log_summary('train')
             agent.save()  # save the latest ckpt
+            print("NOTE: Saved the model.")
             if body.total_reward_ma >= body.best_total_reward_ma:
                 body.best_total_reward_ma = body.total_reward_ma
                 agent.save(ckpt='best')
