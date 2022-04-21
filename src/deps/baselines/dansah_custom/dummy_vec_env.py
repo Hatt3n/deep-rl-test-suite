@@ -83,11 +83,12 @@ class DummyVecEnv(VecEnv):
                 if self.ep_len_counter >= self.max_ep_len:
                     self.buf_dones[e] = True
             if self.buf_dones[e]:
-                if not self.buf_infos[e].get('episode') and self.num_envs == 1:
-                    self.buf_infos[e]['episode'] = {
-                        'r': self.total_reward,
-                        'l': self.ep_len_counter,
-                    }
+                if self.num_envs == 1:
+                    if not self.buf_infos[e].get('episode'):
+                        self.buf_infos[e]['episode'] = {
+                            'r': self.total_reward,
+                            'l': self.ep_len_counter,
+                        }
                     self.total_reward = np.float16(0)
                     self.ep_len_counter = 0
                 self.real_last_obs[e] = obs
