@@ -18,7 +18,7 @@ logger = logger.get_logger(__name__)
 def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
         epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train', collect_data=False,
         training_start_step=-1, explore_var_spec=None, memory=None, is_furuta_env=False, action_pdtype="Categorical", 
-        action_policy="boltzmann", clip_grad_val=0.5, lr_scheduler_spec=None, 
+        action_policy="boltzmann", clip_grad_val=0.5, lr_scheduler_spec="None", 
         net_update_type="replace", net_update_frequency=10, training_batch_iter=2, training_iter=2):
 
     # Initialize all required values.
@@ -38,7 +38,7 @@ def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
             "use_cer": False,
         }
     
-    if lr_scheduler_spec is None:
+    if lr_scheduler_spec is "None":
         lr_scheduler_spec = {
             "name": "LinearToZero", # Calculates LR as "x: 1 - x / frame"; ensure frame is not < max_frame.
             "frame": min_env_interactions + max(steps_per_epoch,max_ep_len),

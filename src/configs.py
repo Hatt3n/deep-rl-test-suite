@@ -53,8 +53,8 @@ algo_env_configs = {
                 "clip_grad_val": 0.5,
                 "lr_scheduler_spec": {
                     "name": "StepLR",
-                    "step_size": 500,
-                    "gamma": 0.9,
+                    "step_size": 500,       # Frequency in terms of epochs with which the LR decays
+                    "gamma": 0.9,           # Decay factor: lr_new = gamma * lr_old
                 },
                 "net_update_type": "replace",
                 "net_update_frequency": 10,
@@ -111,7 +111,7 @@ algo_env_configs = {
                 "explore_var_spec": {
                     "start_val": 3.0,
                     "end_val": 0.1,
-                    "end_step": 12000,
+                    "end_step": 40000,
                 },
                 "memory": {
                     "max_size": 30000,
@@ -119,12 +119,8 @@ algo_env_configs = {
                 },
                 "action_pdtype": "Categorical",
                 "action_policy": "boltzmann",
-                "clip_grad_val": 0.5,
-                "lr_scheduler_spec": {
-                    "name": "StepLR",
-                    "step_size": 500,
-                    "gamma": 0.9,
-                },
+                "clip_grad_val": None,
+                "lr_scheduler_spec": None,
                 "net_update_type": "replace",
                 "net_update_frequency": 10,
                 "training_batch_iter": 2,
