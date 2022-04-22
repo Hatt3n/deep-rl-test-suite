@@ -17,6 +17,8 @@ def calc_reward(theta, dthetadt, phi, dphidt, dt=0.02):
     not be wrapped.
     """
     reward = dt * (abs(abs(theta) - np.pi) < np.pi / 4) * (abs(phi) < 2*np.pi) * (abs(dthetadt) < 2*np.pi/3)
+    if dphidt is not None:
+        reward *= (abs(dphidt) < 2*np.pi/3)
     return reward
 
 

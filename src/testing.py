@@ -146,6 +146,14 @@ def make_env_pbrs():
     from custom_envs.furuta_swing_up_pbrs import FurutaPendulumEnvPBRS
     return FurutaPendulumEnvPBRS()
 
+def make_env_pbrs2():
+    """
+    Creates a Furuta Pendulum environment (swing-up) similar to the
+    regular PBRS one, but with additional constraints on dphidt.
+    """
+    from custom_envs.furuta_swing_up_pbrs_v2 import FurutaPendulumEnvPBRS_V2
+    return FurutaPendulumEnvPBRS_V2()
+
 ######################
 # Training functions #
 ######################
@@ -457,6 +465,12 @@ def main():
             "name": "furuta_pbrs",
             "env_fn": make_env_pbrs,
             "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_pbrs),
+            "max_ep_len": 501,
+        },
+        {
+            "name": "furuta_pbrs2",
+            "env_fn": make_env_pbrs2,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_pbrs2),
             "max_ep_len": 501,
         },
         {

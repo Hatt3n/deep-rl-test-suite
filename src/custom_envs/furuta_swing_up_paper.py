@@ -37,7 +37,7 @@ class FurutaPendulumEnvPaper(custom_envs.furuta_swing_up_base.FurutaPendulumEnv)
         self.dot_theta_2_min = 5
         self.c_balance = 5
     
-    def _calc_reward(self, theta_1, theta_2, dot_theta_2, tau_c):
+    def _calc_reward(self, theta_1, theta_2, dot_theta_2, tau_c, dot_theta_1):
         """
         Calculates the reward.
         From the paper "A Reinforcement Learning Controller for the Swing-Up of the Furuta Pendulum" by D. Guida et al. (2020)
@@ -67,12 +67,13 @@ class FurutaPendulumEnvPaper(custom_envs.furuta_swing_up_base.FurutaPendulumEnv)
         theta = internal_state[0]
         dthetadt = internal_state[1]
         phi = internal_state[3]
+        dphidt = internal_state[2]
 
         terminal = self._terminal_reached()
 
         # In the paper, theta_2 (here: theta) is 0 when the arm is hanging down vertically, and positive when rotating counter-clockwise.
         # Similarily, theta_1 (here: phi) is positive when rotating counter-clockwise.
-        reward = self._calc_reward(theta_1=phi, theta_2=(theta - np.pi), dot_theta_2=dthetadt, tau_c=torque)
+        reward = self._calc_reward(theta_1=phi, theta_2=(theta - np.pi), dot_theta_2=dthetadt, tau_c=torque, dot_theta_1=dphidt)
 
         observed_state = self._get_observed_state_from_internal(internal_state)
 

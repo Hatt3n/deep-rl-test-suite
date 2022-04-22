@@ -26,7 +26,7 @@ class FurutaPendulumEnvPBRS(FurutaPendulumEnvPaperMix):
         super().__init__()
 
 
-    def _calc_reward(self, theta_1, theta_2, dot_theta_2, tau_c):
+    def _calc_reward(self, theta_1, theta_2, dot_theta_2, tau_c, dot_theta_1):
         """
         Calculates the reward.
         """
