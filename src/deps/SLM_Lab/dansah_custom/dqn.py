@@ -38,7 +38,7 @@ def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
             "use_cer": False,
         }
     
-    if lr_scheduler_spec is "None":
+    if lr_scheduler_spec == "None":
         lr_scheduler_spec = {
             "name": "LinearToZero", # Calculates LR as "x: 1 - x / frame"; ensure frame is not < max_frame.
             "frame": min_env_interactions + max(steps_per_epoch,max_ep_len),
