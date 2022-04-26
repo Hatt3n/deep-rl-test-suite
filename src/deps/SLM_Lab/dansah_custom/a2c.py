@@ -13,13 +13,22 @@ import os
 
 def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
         epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train', collect_data=False,
-        action_policy="epsilon_greedy", net=None, is_furuta_env=False):
+        action_policy="epsilon_greedy", optim_spec=None, same_optim=True, normalize=False, batch_norm=False,
+        clip_grad_val=0.5, val_loss_coef=0.5, entropy_coef=0.001, init_fn=None, is_furuta_env=False):
     """
     mode: Should be 'train' or 'enjoy'.
     """
 
     if min_env_interactions == 0:
         min_env_interactions = epochs * steps_per_epoch
+    
+    if optim_spec is None:
+        optim_spec = {
+            "name": "RMSprop",
+            "lr": 5e-3,
+            "alpha": 0.99,
+            "eps": 1e-5
+        }
 
     os.environ['lab_mode'] = mode
 
@@ -37,12 +46,12 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
                 "num_step_returns": None,
                 "entropy_coef_spec": {
                     "name": "no_decay",
-                    "start_val": 0.001,
-                    "end_val": 0.001,
+                    "start_val": entropy_coef,
+                    "end_val": entropy_coef,
                     "start_step": 0,
                     "end_step": 0
                 },
-                "val_loss_coef": 0.5,
+                "val_loss_coef": val_loss_coef,
                 "training_frequency": steps_per_epoch # OnPolicyBatchReplay trains every X experiences.
             },
             "memory": {
@@ -53,26 +62,16 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
                 "shared": False,
                 "hid_layers": ac_kwargs['hidden_sizes'],
                 "hid_layers_activation": ac_kwargs['activation_name'],
-                "init_fn": None,
-                "normalize": False if net is None else net['normalize'],
-                "batch_norm": False,
-                "clip_grad_val": 0.5,
-                "use_same_optim": True,
+                "init_fn": init_fn,
+                "normalize": normalize,
+                "batch_norm": batch_norm,
+                "clip_grad_val": clip_grad_val,
+                "use_same_optim": same_optim,
                 "loss_spec": {
                     "name": "MSELoss"
                 },
-                "actor_optim_spec": {
-                    "name": "RMSprop",
-                    "lr": 5e-3,
-                    "alpha": 0.99,
-                    "eps": 1e-5
-                },
-                "critic_optim_spec": {
-                    "name": "RMSprop",
-                    "lr": 5e-3,
-                    "alpha": 0.99,
-                    "eps": 1e-5
-                },
+                "actor_optim_spec": optim_spec,
+                "critic_optim_spec": optim_spec,
                 "lr_scheduler_spec": None,
                 "gpu": False
             }

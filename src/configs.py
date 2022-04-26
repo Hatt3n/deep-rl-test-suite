@@ -21,9 +21,7 @@ algo_env_configs = {
             "log_frequency": 400,
             "specific": {                   # All from SLM_Lab spec-file "a2c_gae_cartpole.json"
                 "action_policy": "default",
-                "net": {
-                    "normalize": True,
-                },
+                "normalize": True,
             },
         },
         "ddpg": {
@@ -145,6 +143,37 @@ algo_env_configs = {
             }
         },
     },
+    "walker_2d": {
+        "a2c_s": {
+            "training_frequency": 48,
+            "log_frequency": 2000,
+            "specific": {                   # All from SLM_Lab spec-file "a2c_gae_roboschool.json"
+                "action_policy": "default",
+                "normalize": False,
+                "entropy_coef": 0.01,
+            #     "val_loss_coef": 1.0,
+                "same_optim": False,
+                # "optim_spec": {
+                #     "name": "Lookahead",
+                #     "optimizer": "RAdam",
+                #     "lr": 3e-4,
+                # },
+            #     "init_fn": "orthogonal_",
+                "batch_norm": True,
+                "clip_grad_val": 2.0,      # Added by @dansah
+            },
+        },
+        "ddpg": {
+            "training_frequency": 256,
+            "log_frequency": 2000,
+            "specific": {
+                "start_steps": 8000,
+                "perform_eval": False,
+                #"replay_size": 10000,
+                #"batch_size": 10,
+            },
+        },
+    }
 }
 
 duplicate_env_configs = {
