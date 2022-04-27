@@ -65,7 +65,7 @@ algo_env_configs = {
             "log_frequency": 400,
         },
         "reinforce": {
-            "training_frequency": 1, # Value from SLM_Lab spec-file "reinforce_cartpole.json"
+            "training_frequency": 1,        # Value from SLM_Lab spec-file "reinforce_cartpole.json"
             "log_frequency": 400,
         },
         "rs_mpc": {
@@ -95,8 +95,10 @@ algo_env_configs = {
             "training_frequency": 256,
             "log_frequency": 2000,
             "specific": {
-                "start_steps": 8000,
+                "start_steps": 10000,
                 "perform_eval": False,
+                "pi_lr": 5e-4,
+                "q_lr": 5e-4,
                 #"replay_size": 10000,
                 #"batch_size": 10,
             },
@@ -126,12 +128,28 @@ algo_env_configs = {
             },
         },
         "ppo": {
-            "training_frequency": 4008,
-            "log_frequency": 4100,
+            "training_frequency": 1000,
+            "log_frequency": 4000,
+            # "specific": {
+            #     "train_pi_iters": 80,
+            #     "train_v_iters": 80,
+            #     "clip_ratio": 0.2,
+            #     "vf_lr": 2e-3,
+            #     "pi_lr": 2e-3,
+            #     "target_kl": 1.00,
+            # }
         },
         "reinforce": {
             "training_frequency": 1,
-            "log_frequency": 4100,
+            "log_frequency": 4000,
+            # "specific": {
+            #     "lr": 5e-4,
+            #     "entropy_coef_spec": {
+            #         "start_val": 0.01,
+            #         "end_val": 0.001,
+            #         "end_step": 40000,
+            #     }
+            # }
         },
         "rs_mpc": {
             "training_frequency": 1000,
