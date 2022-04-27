@@ -23,8 +23,8 @@ import os
 logger = logger.get_logger(__name__)
 
 def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
-              epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train', collect_data=False,
-              is_furuta_env=False):
+              epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, lr=0.002, entropy_coef_spec=None,
+              mode='train', collect_data=False, is_furuta_env=False):
     """
     mode: Should be 'train' or 'enjoy'.
     """
@@ -34,6 +34,13 @@ def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
     if min_env_interactions == 0:
         min_env_interactions = epochs * steps_per_epoch * max_ep_len # NOTE: Since an episode can be shorter than max_ep_len, the real number of epochs
                                                                      # could be larger than intended.
+    
+    if entropy_coef_spec is None:
+        entropy_coef_spec = {
+            "start_val": 0.01,
+            "end_val": 0.001,
+            "end_step": 20000,
+        }
 
     spec = {
         "name": "reinforce_furuta_spec",
@@ -48,10 +55,10 @@ def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
                 "gamma": 0.99,
                 "entropy_coef_spec": {
                     "name": "linear_decay",
-                    "start_val": 0.01,
-                    "end_val": 0.001,
+                    "start_val": entropy_coef_spec['start_val'],
+                    "end_val": entropy_coef_spec['end_val'],
                     "start_step": 0,
-                    "end_step": 20000,
+                    "end_step": entropy_coef_spec['end_step'],
                 },
                 "training_frequency": steps_per_epoch # OnPolicyReplay trains every X episodes.
             },
@@ -68,7 +75,7 @@ def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
                 },
                 "optim_spec": {
                     "name": "Adam",
-                    "lr": 0.002
+                    "lr": lr,
                 },
                 "lr_scheduler_spec": None
             }
