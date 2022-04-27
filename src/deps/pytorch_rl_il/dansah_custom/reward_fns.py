@@ -154,3 +154,29 @@ class FurutaPBRSreward():
                        phi=states.features[:, 0])
 
         return reward + outer_reward
+
+
+class FurutaPBRSreward_V2():
+    """
+    Implements the reward function of the Furuta Pendulum swing-up environment that
+    uses the idea of PBRS, as relayed in "Reward Function Design in Reinforcement Learning" 
+    by J. Eschmann (2021), to densify a sparse reward function.
+    """
+
+    def __init__(self):
+        pass
+
+
+    def __call__(self, states, next_states, actions):
+        from custom_envs.furuta_swing_up_eval import calc_reward
+        from custom_envs.furuta_swing_up_pbrs_v2 import phi_func
+        # state looks like: (phi, dphidt, theta, dthetadt)
+        # theta it already "moved" so that when it is pi, it is upright vertical.
+        reward = calc_reward(theta=next_states.features[:, 2], dthetadt=next_states.features[:, 3], 
+                             phi=next_states.features[:, 0], dphidt=next_states.features[:, 1], dt=10)
+
+        outer_reward = 0.99 * phi_func(theta=next_states.features[:, 2], dthetadt=next_states.features[:, 3], 
+                       phi=next_states.features[:, 0], dphidt=next_states.features[:, 1]) - phi_func(theta=states.features[:, 2], 
+                       dthetadt=states.features[:, 3], phi=states.features[:, 0], dphidt=states.features[:, 1])
+
+        return reward + outer_reward
