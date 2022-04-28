@@ -117,10 +117,15 @@ algo_env_configs = {
                     "max_size": 30000,
                     "use_cer": False,
                 },
+                "lr": 5e-5,                 # Best, have not tried lower but higher perform worse
                 "action_pdtype": "Categorical",
                 "action_policy": "boltzmann",
                 "clip_grad_val": None,
-                "lr_scheduler_spec": None,
+                "lr_scheduler_spec": {
+                    "name": "MultiStepLR",  # Tried StepLR with step_size 200000
+                    "milestones": [500000],
+                    "gamma": 0.5,
+                },
                 "net_update_type": "replace",
                 "net_update_frequency": 10,
                 "training_batch_iter": 2,
