@@ -36,6 +36,12 @@ def get_experiment(exp_name):
         architecture_to_use = ["64_64_relu", "256_128_relu"]
         seeds = [0] #[0, 10, 100, 1000]
         return envs_to_use, algorithms_to_use, architecture_to_use, seeds
+    elif exp_name == "ddpg":
+        envs_to_use = ["furuta_pbrs2"]
+        algorithms_to_use = ["ddpg"]
+        architecture_to_use = ["64_64_relu", "256_128_relu"]
+        seeds = [0, 10, 100, 1000]
+        return envs_to_use, algorithms_to_use, architecture_to_use, seeds
     else:
         NotImplementedError("Unknown experiment %s" % exp_name)
 
