@@ -21,7 +21,7 @@ from . import REWARDS
 
 
 def rs_mpc(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=128, 
-           min_env_interactions=int(1e5), logger_kwargs=dict(), seed=0,
+           min_env_interactions=int(1e5), logger_kwargs=dict(), seed=0, lr=1e-3,
            horizon=20, num_samples=1000, minibatch_size=100, replay_start_size=5000, replay_buffer_size=1e7,
            perform_eval=True):
 
@@ -56,6 +56,7 @@ def rs_mpc(env_fn, ac_kwargs=dict(), max_ep_len=501, steps_per_epoch=128,
         "minibatch_size": minibatch_size,
         "replay_start_size": replay_start_size,
         "replay_buffer_size": replay_buffer_size,
+        "lr_dyn": lr,
     } 
     agent_fn = rs_mpc_preset(**buffer_args)
     save_buffer_args(buffer_args, log_dir)
