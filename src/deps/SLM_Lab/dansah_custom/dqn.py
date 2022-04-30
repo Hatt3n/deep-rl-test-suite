@@ -90,7 +90,7 @@ def dqn(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
                 "update_type": net_update_type,
                 "update_frequency": net_update_frequency,
                 "polyak_coef": 0,
-                "gpu": False
+                "gpu": torch.cuda.is_available()
             }
         }],
         "env": [{

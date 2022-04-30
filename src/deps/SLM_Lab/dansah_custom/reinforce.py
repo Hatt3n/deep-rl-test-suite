@@ -77,7 +77,8 @@ def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
                     "name": "Adam",
                     "lr": lr,
                 },
-                "lr_scheduler_spec": None
+                "lr_scheduler_spec": None,
+                "gpu": torch.cuda.is_available()
             }
         }],
         "env": [{

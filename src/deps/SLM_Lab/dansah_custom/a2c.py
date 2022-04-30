@@ -9,6 +9,7 @@ from deps.SLM_Lab.dansah_custom.env_wrapper import EnvWrapper
 from deps.SLM_Lab.dansah_custom.SLM_Trainer import SLM_Trainer, set_global_seed
 from deps.SLM_Lab.slm_lab.lib import util
 
+import torch
 import os
 
 def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
@@ -73,7 +74,7 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
                 "actor_optim_spec": optim_spec,
                 "critic_optim_spec": optim_spec,
                 "lr_scheduler_spec": None,
-                "gpu": False
+                "gpu": torch.cuda.is_available()
             }
         }],
         "env": [{
