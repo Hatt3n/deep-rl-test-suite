@@ -73,18 +73,21 @@ algo_env_configs = {
             "log_frequency": 400,
             "specific": {
                 "perform_eval": False,
+                #"lr": 5e-4,
+                "horizon": 40,
+                "num_samples": 3000,
             }
         },
     },
     "furuta_paper": {
         "a2c": {
-            "training_frequency": 4008,     # How often updates are performed. NOTE: Could be in terms of experiences or episodes; this depends on the algorithm.
-            "log_frequency": 4100,
+            "training_frequency": 512,     # How often updates are performed. NOTE: Could be in terms of experiences or episodes; this depends on the algorithm.
+            "log_frequency": 4000,
             "specific": {
-                "lr": 5e-3,
+                # "lr": 5e-3,
                 "max_grad_norm": None,
-                "vf_coef": 0.8, 
-                "ent_coef": 0.01,
+                # "vf_coef": 0.8, 
+                # "ent_coef": 0.05,
             },
         },
         "a2c_s": {
