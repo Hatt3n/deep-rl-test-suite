@@ -44,7 +44,7 @@ def get_experiment(exp_name):
         return envs_to_use, algorithms_to_use, architecture_to_use, seeds
     elif exp_name == "pbrs_comp":
         envs_to_use = ["furuta_pbrs2", "furuta_pbrs3"]
-        algorithms_to_use = ["ddpg"]
+        algorithms_to_use = ["ddpg", "a2c", "a2c_s", "ppo"]
         architecture_to_use = ["64_64_relu"]
         seeds = [0, 10, 100, 1000]
         return envs_to_use, algorithms_to_use, architecture_to_use, seeds
