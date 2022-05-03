@@ -209,6 +209,7 @@ duplicate_env_configs = {
     "furuta_paper_mix": algo_env_configs['furuta_paper'],
     "furuta_pbrs": algo_env_configs['furuta_paper'],
     "furuta_pbrs2": algo_env_configs['furuta_paper'],
+    "furuta_pbrs3": algo_env_configs['furuta_paper'],
 }
 
 ALGO_ENV_CONFIGS = {**algo_env_configs, **duplicate_env_configs}

@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-04-27
+Last edit: 2022-05-03
 By: dansah
 """
 
@@ -154,6 +154,14 @@ def make_env_pbrs2():
     """
     from custom_envs.furuta_swing_up_pbrs_v2 import FurutaPendulumEnvPBRS_V2
     return FurutaPendulumEnvPBRS_V2()
+
+def make_env_pbrs3():
+    """
+    Creates a Furuta Pendulum environment (swing-up) similar to PBRS V2, 
+    but with a big neative reward on early termination.
+    """
+    from custom_envs.furuta_swing_up_pbrs_v3 import FurutaPendulumEnvPBRS_V3
+    return FurutaPendulumEnvPBRS_V3()
 
 ######################
 # Training functions #
@@ -475,6 +483,12 @@ def main():
             "max_ep_len": 501,
         },
         {
+            "name": "furuta_pbrs3",
+            "env_fn": make_env_pbrs3,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_pbrs3),
+            "max_ep_len": 501,
+        },
+        {
             "name": "cartpole",
             "env_fn": make_cartpole_env,
             "env_fn_disc": make_cartpole_env,
@@ -648,6 +662,7 @@ def main():
 if __name__ == "__main__":
     import argparse
     argparser = argparse.ArgumentParser()
+    argparser.add_argument("-x", "--exp", help="Specify an experiment to run")
     argparser.add_argument("-t", "--train", action="store_true", help="Perform training")
     argparser.add_argument("-e", "--eval", action="store_true", help="Perform evaluation")
     argparser.add_argument("-p", "--plot", action="store_true", help="Produce plots")
@@ -655,10 +670,12 @@ if __name__ == "__main__":
     argparser.add_argument("-a", "--algs", nargs='*', help="The algorithms to use")
     argparser.add_argument("-n", "--envs", nargs='*', help="The environments to use")
     argparser.add_argument("-r", "--arch", nargs='*', help="The architectures to use")
-    argparser.add_argument("-s", "--seeds", nargs='*', help="The seeds to use")
+    argparser.add_argument("-s", "--seeds", nargs='*', type=int, help="The seeds to use")
     argparser.add_argument("-i", "--inter", type=int, help="The number of interactions to target")
-    argparser.add_argument("-x", "--exp", help="Specify an experiment to run")
     args = argparser.parse_args()
+
+    if args.exp:
+        ENVS_TO_USE, ALGORITHMS_TO_USE, ARCHS_TO_USE, SEEDS_TO_USE = get_experiment(args.exp)
 
     if args.train:
         DO_TRAINING = True
@@ -695,8 +712,5 @@ if __name__ == "__main__":
         MIN_ENV_INTERACTIONS = args.inter
     else:
         MIN_ENV_INTERACTIONS = 100000
-
-    if args.exp:
-        ENVS_TO_USE, ALGORITHMS_TO_USE, ARCHS_TO_USE, SEEDS_TO_USE = get_experiment(args.exp)
 
     main()
