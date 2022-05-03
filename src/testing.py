@@ -700,12 +700,12 @@ if __name__ == "__main__":
 
     if args.arch:
         ARCHS_TO_USE = args.arch
-    else:
+    elif len(ARCHS_TO_USE) == 0:
         ARCHS_TO_USE = ["64_64_relu"]
 
     if args.seeds:
         SEEDS_TO_USE = args.seeds
-    else:
+    elif len(SEEDS_TO_USE) == 0:
         SEEDS_TO_USE = [0]
 
     if args.inter:
