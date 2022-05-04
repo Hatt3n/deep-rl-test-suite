@@ -170,8 +170,12 @@ def make_env_qube2_sim():
     NOTE: Requires Quanser OpenAI Driver, available at:
     https://github.com/BlueRiverTech/quanser-openai-driver
     """
-    from custom_envs.furuta_qube2 import FurutaQube2
-    return FurutaQube2(use_simulator=True)
+    try:
+        from custom_envs.furuta_qube2 import FurutaQube2
+        return FurutaQube2(use_simulator=True)
+    except:
+        print("WARNING: Could not import gym_brt")
+        return None
 
 def make_env_qube2_real():
     """
@@ -180,8 +184,12 @@ def make_env_qube2_real():
     NOTE: Requires Quanser OpenAI Driver, available at:
     https://github.com/BlueRiverTech/quanser-openai-driver
     """
-    from custom_envs.furuta_qube2 import FurutaQube2
-    return FurutaQube2(use_simulator=False)
+    try:
+        from custom_envs.furuta_qube2 import FurutaQube2
+        return FurutaQube2(use_simulator=False)
+    except:
+        print("WARNING: Could not import gym_brt")
+        return None
 
 ######################
 # Training functions #
