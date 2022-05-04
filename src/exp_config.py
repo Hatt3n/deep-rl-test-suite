@@ -22,7 +22,7 @@ def get_experiment(exp_name):
         envs_to_use = ["cartpole"]
         algorithms_to_use = ["rs_mpc", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
         architecture_to_use = ["64_relu", "64_64_relu"] # TODO: Test one with tanh?
-        seeds = [0] #[0, 10, 100, 1000]
+        seeds = [0, 10, 100, 1000]
         return envs_to_use, algorithms_to_use, architecture_to_use, seeds
     elif exp_name == "mix":
         envs_to_use = ["furuta_paper_mix"]
