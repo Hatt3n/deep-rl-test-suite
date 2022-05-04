@@ -199,6 +199,96 @@ algo_env_configs = {
                 #"batch_size": 10,
             },
         },
+    },
+    "qube2_sim": {
+        "a2c": {
+            "training_frequency": 512,
+            "log_frequency": 4000,
+            "specific": {
+                # "lr": 5e-3,
+                "max_grad_norm": None,
+                # "vf_coef": 0.8, 
+                # "ent_coef": 0.05,
+            },
+        },
+        "a2c_s": {
+            "training_frequency": 4008,
+            "log_frequency": 4100,
+        },
+        "ddpg": {
+            "training_frequency": 256,
+            "log_frequency": 4000,
+            "specific": {
+                "start_steps": 10000,
+                "perform_eval": False,
+                "pi_lr": 5e-4,
+                "q_lr": 5e-4,
+                #"replay_size": 10000,
+                #"batch_size": 10,
+            },
+        },
+        "dqn": {
+            "training_frequency": 2004,
+            "log_frequency": 4100,
+            "specific": {                   # Based on SLM_Lab spec-file "dqn_cartpole.json"
+                "training_start_step": 4008,
+                "explore_var_spec": {
+                    "start_val": 3.0,
+                    "end_val": 0.1,
+                    "end_step": 40000,
+                },
+                "memory": {
+                    "max_size": 30000,
+                    "use_cer": False,
+                },
+                "lr": 5e-5,
+                "action_pdtype": "Categorical",
+                "action_policy": "boltzmann",
+                "clip_grad_val": None,
+                "lr_scheduler_spec": {
+                    "name": "MultiStepLR",
+                    "milestones": [500000],
+                    "gamma": 0.5,
+                },
+                "net_update_type": "replace",
+                "net_update_frequency": 10,
+                "training_batch_iter": 2,
+                "training_iter": 2,
+            },
+        },
+        "ppo": {
+            "training_frequency": 1000,
+            "log_frequency": 4000,
+            # "specific": {
+            #     "train_pi_iters": 80,
+            #     "train_v_iters": 80,
+            #     "clip_ratio": 0.2,
+            #     "vf_lr": 2e-3,
+            #     "pi_lr": 2e-3,
+            #     "target_kl": 1.00,
+            # }
+        },
+        "reinforce": {
+            "training_frequency": 1,
+            "log_frequency": 4000,
+            # "specific": {
+            #     "lr": 5e-4,
+            #     "entropy_coef_spec": {
+            #         "start_val": 0.01,
+            #         "end_val": 0.001,
+            #         "end_step": 40000,
+            #     }
+            # }
+        },
+        "rs_mpc": {                         # NOTE: Currently, rs_mpc does not work with Qube 2 (reward-fn is not implemented).
+            "training_frequency": 1000,
+            "log_frequency": 4100,
+            "specific": {
+                "perform_eval": False,
+                "replay_start_size": 10000,
+                "horizon": 40,
+            }
+        },
     }
 }
 
@@ -210,6 +300,7 @@ duplicate_env_configs = {
     "furuta_pbrs": algo_env_configs['furuta_paper'],
     "furuta_pbrs2": algo_env_configs['furuta_paper'],
     "furuta_pbrs3": algo_env_configs['furuta_paper'],
+    "qube2_real": algo_env_configs['qube2_sim'],
 }
 
 ALGO_ENV_CONFIGS = {**algo_env_configs, **duplicate_env_configs}

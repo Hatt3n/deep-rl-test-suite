@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-05-03
+Last edit: 2022-05-04
 By: dansah
 """
 
@@ -162,6 +162,26 @@ def make_env_pbrs3():
     """
     from custom_envs.furuta_swing_up_pbrs_v3 import FurutaPendulumEnvPBRS_V3
     return FurutaPendulumEnvPBRS_V3()
+
+def make_env_qube2_sim():
+    """
+    Creates a Furuta swing-up environment using a simulated version of
+    the QUBE Servo 2 by Quanser.
+    NOTE: Requires Quanser OpenAI Driver, available at:
+    https://github.com/BlueRiverTech/quanser-openai-driver
+    """
+    from custom_envs.furuta_qube2 import FurutaQube2
+    return FurutaQube2(use_simulator=True)
+
+def make_env_qube2_real():
+    """
+    Creates a Furuta swing-up environment that connects to the real,
+    physical, QUBE Servo 2 by Quanser.
+    NOTE: Requires Quanser OpenAI Driver, available at:
+    https://github.com/BlueRiverTech/quanser-openai-driver
+    """
+    from custom_envs.furuta_qube2 import FurutaQube2
+    return FurutaQube2(use_simulator=False)
 
 ######################
 # Training functions #
@@ -498,8 +518,20 @@ def main():
             "name": "walker_2d",
             "env_fn": make_walker_2d_env,
             "env_fn_disc": None,
-            "max_ep_len": 1000, # TODO: Find reasonable value.
+            "max_ep_len": 1000, # NOTE: Arbitrarily chosen value.
         },
+        {
+            "name": "qube2_sim",
+            "env_fn": make_env_qube2_sim,
+            "env_fn_disc": DiscretizingEnvironmentWrapper(make_env_qube2_sim),
+            "max_ep_len": 2048,
+        },
+        {
+            "name": "qube2_real",
+            "env_fn": make_env_qube2_real,
+            "env_fn_disc": None,
+            "max_ep_len": 2048,
+        }
     ]
     all_algorithms = [
         {
