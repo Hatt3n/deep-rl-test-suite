@@ -28,6 +28,7 @@ class DiscretizingEnvironmentWrapper(gym.core.Env):
         self.env = env_fn()
         if self.env is None:
             print("ERROR: Failed to initialize discrete environment, env_fn call returned None.")
+            return
 
         # Set values related to discretization
         self.n = n if n % 2 == 1 else n+1 # n should be odd, to include 0 (all action values will be of equal distance to each other)
