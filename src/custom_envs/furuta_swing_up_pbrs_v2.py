@@ -34,7 +34,9 @@ class FurutaPendulumEnvPBRS_V2(FurutaPendulumEnvPaperMix):
         Calculates the reward.
         """
         reward = calc_reward(theta=theta_2, dthetadt=dot_theta_2, phi=theta_1, dphidt=dot_theta_1, dt=10) # Sparse
-        # PBRS, as relayed in "Reward Function Design in Reinforcement Learning" by J. Eschmann (2021).
+        # PBRS, as relayed in "Reward Function Design in Reinforcement Learning" by J. Eschmann (2021) and
+        # originally detailed in "Policy invariance under reward transformations: Theory and application to reward shaping"
+        # by Andrew Y. Ng et al. (1999)
         # R'(s, a, s') = R(s, a, s') + F(s, s')
         # F(s, s') = gamma * Phi(s') - Phi(s)
         old_theta = self._old_internal_state[0]

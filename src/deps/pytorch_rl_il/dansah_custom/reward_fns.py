@@ -133,8 +133,9 @@ class FurutaPaperMixReward(FurutaPaperObsReward):
 class FurutaPBRSreward():
     """
     Implements the reward function of the Furuta Pendulum swing-up environment that
-    uses the idea of PBRS, as relayed in "Reward Function Design in Reinforcement Learning" 
-    by J. Eschmann (2021), to densify a sparse reward function.
+    uses the idea PBRS, as relayed in "Reward Function Design in Reinforcement Learning" by J. Eschmann (2021) and
+    originally detailed in "Policy invariance under reward transformations: Theory and application to reward shaping"
+    by Andrew Y. Ng et al. (1999)
     """
 
     def __init__(self):
@@ -159,8 +160,9 @@ class FurutaPBRSreward():
 class FurutaPBRSreward_V2():
     """
     Implements the reward function of the Furuta Pendulum swing-up environment that
-    uses the idea of PBRS, as relayed in "Reward Function Design in Reinforcement Learning" 
-    by J. Eschmann (2021), to densify a sparse reward function.
+    uses the idea of PBRS, as relayed in "Reward Function Design in Reinforcement Learning" by J. Eschmann (2021) and
+    originally detailed in "Policy invariance under reward transformations: Theory and application to reward shaping"
+    by Andrew Y. Ng et al. (1999)
     """
 
     def __init__(self):
