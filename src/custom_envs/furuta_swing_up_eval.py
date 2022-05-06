@@ -109,7 +109,8 @@ class FurutaPendulumEnvEvalWrapper(gym.core.Env):
         theta = internal_state[0] - np.pi
         dthetadt = internal_state[1]
         phi = internal_state[3]
-        dphidt = internal_state[2]
+        #dphidt = internal_state[2]
+        dphidt = None # To ensure fairness, this value is not used when comparing across environments.
 
         if self.early_stopping:
             self._early_stop_occurred = self._early_stop_occurred or abs(theta > 2*np.pi) or abs(phi > 2*np.pi)
