@@ -174,7 +174,7 @@ algo_env_configs = {
             "training_frequency": 512, # was 512
             "log_frequency": 4000,
             "specific": {
-                "lr": 1e-3, # was 1e-3
+                "lr": 1e-3, # was 1e-3  not: 5e-3, 5e-4
                 "lrschedule": "constant",
                 "max_grad_norm": None,
                 "vf_coef": 0.8, 
@@ -413,7 +413,7 @@ duplicate_env_configs = {
     "furuta_paper_r": algo_env_configs['furuta_paper'],
     "furuta_paper_obs": algo_env_configs['furuta_paper'],
     "furuta_paper_mix": algo_env_configs['furuta_paper'],
-    "furuta_pbrs": algo_env_configs['furuta_paper'],
+    "furuta_pbrs": algo_env_configs['furuta_pbrs2'],
     "furuta_pbrs3": algo_env_configs['furuta_pbrs2'],
     "qube2_real": algo_env_configs['qube2_sim'],
 }
