@@ -6,6 +6,7 @@ data/
 !src/deps/pytorch_rl_il/rlil/environments/data/
 *.zip
 org_out___
+report_res
 
 # macOS
 .DS_Store
