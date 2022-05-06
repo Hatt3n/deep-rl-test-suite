@@ -4,6 +4,8 @@ tmp/
 out*/
 data/
 !src/deps/pytorch_rl_il/rlil/environments/data/
+*.zip
+org_out___
 
 # macOS
 .DS_Store
