@@ -24,7 +24,7 @@ logger = logger.get_logger(__name__)
 
 def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
               epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, lr=0.002, entropy_coef_spec=None,
-              mode='train', collect_data=False, is_furuta_env=False):
+              lr_scheduler_spec=None, mode='train', collect_data=False, is_furuta_env=False):
     """
     mode: Should be 'train' or 'enjoy'.
     """
@@ -77,7 +77,7 @@ def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
                     "name": "Adam",
                     "lr": lr,
                 },
-                "lr_scheduler_spec": None,
+                "lr_scheduler_spec": lr_scheduler_spec,
                 "gpu": torch.cuda.is_available()
             }
         }],
