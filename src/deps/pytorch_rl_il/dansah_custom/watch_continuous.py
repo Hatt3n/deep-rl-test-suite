@@ -23,7 +23,7 @@ def evaluate_algorithm(env_fn, ac_kwargs, max_ep_len, num_episodes=5, seed=0, fp
     collect_data = env.collect_data # True if data will be collected.
     if is_furuta_env:
         from custom_envs.furuta_swing_up_eval import FurutaPendulumEnvEvalWrapper
-        env = FurutaPendulumEnvEvalWrapper(env=env)
+        env = FurutaPendulumEnvEvalWrapper(env=env, seed=seed)
     env.seed(seed)
 
     # Load agent

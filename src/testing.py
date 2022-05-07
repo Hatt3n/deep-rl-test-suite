@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-05-04
+Last edit: 2022-05-07
 By: dansah
 """
 
@@ -69,6 +69,7 @@ WORK_DIR = pathlib.Path().resolve()
 # Important values #
 ####################
 RENDER_TYPE, SAVE_VIDEO = "3d", False # Whether to use 3d-rendering for the Furuta environments or not / save the evaluation video.
+HIDE_VIS = False # Whether to hide the visualization during evaluation
 
 #########################
 # Environment functions #
@@ -271,7 +272,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
                                                           False,  # Deterministic true/false. Only used by the SAC algorithm.
                                                           force_disc)
         if is_furuta_env:
-            env = FurutaPendulumEnvEvalWrapper(env=env)
+            env = FurutaPendulumEnvEvalWrapper(env=env, seed=seed)
         if use_3d_render:
             try:
                 env.collect_data()
@@ -297,7 +298,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             logger.log("Running trained model")
             if is_furuta_env:
                 _env = env_fn()
-                env_fn = lambda : FurutaPendulumEnvEvalWrapper(env=_env)
+                env_fn = lambda : FurutaPendulumEnvEvalWrapper(env=_env, seed=seed)
             env = DummyVecEnv(env_fns=[env_fn], max_ep_len=max_ep_len, collect_data=use_3d_render)
             use_def_render = not env.collect_data # True if data will be collected
             use_3d_render = not use_def_render
@@ -334,7 +335,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
                                      arch_dict=arch_dict, env_dict=env_dict, output_dir=output_dir, xtra_args=True)
         collected_data, independent_furuta_data = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, 
                                                                      steps_per_epoch=max_ep_len, num_episodes=num_episodes, 
-                                                                     logger_kwargs=dict(), seed=0, mode='enjoy', collect_data=use_3d_render, 
+                                                                     logger_kwargs=dict(), seed=seed, mode='enjoy', collect_data=use_3d_render, 
                                                                      is_furuta_env=is_furuta_env)
 
     elif alg_dict['type'] == 'rlil':
@@ -343,13 +344,13 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=act_func, arch_dict=arch_dict, env_dict=env_dict,
                                      output_dir=output_dir, xtra_args=True)
         collected_data, independent_furuta_data = evaluate_algorithm(env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, 
-                                                                     num_episodes=num_episodes, seed=0, collect_data=use_3d_render,
+                                                                     num_episodes=num_episodes, seed=seed, collect_data=use_3d_render,
                                                                      is_furuta_env=is_furuta_env)
 
     else:
         raise NotImplementedError("No handler for algorithm type %s" % (alg_dict['type']))
     
-    if use_3d_render and is_furuta_env:
+    if use_3d_render and is_furuta_env and not HIDE_VIS:
         assert collected_data is not None, "No data was collected for rendering!"
         from deps.visualizer.visualizer import plot_animated
         name = "%s - %s" % (alg_dict['name'], arch_dict['name'])
@@ -633,7 +634,6 @@ def main():
                         train_algorithm(alg_dict, arch_dict, env_dict, seed)
 
     if DO_POLICY_TEST:
-        seed = SEEDS_TO_USE[0]
         eval_table = dict()
         for env_dict in envs:
             is_furuta_env = env_dict['name'].find('furuta') >= 0
@@ -642,13 +642,20 @@ def main():
             for arch_dict in architectures:
                 if is_furuta_env:
                     eval_table[env_dict['name']][arch_dict['name']] = dict()
-                annonuce_message("Now testing %s in environment %s with seed %s" % (arch_dict['name'], env_dict['name'], seed))
                 for alg_dict in algorithms:
-                    heads_up_message("Testing algorithm %s" % (alg_dict['name']))
-                    furuta_eval_data = evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type=RENDER_TYPE)
-                    if furuta_eval_data is not None:
-                        eval_table[env_dict['name']][arch_dict['name']][alg_dict['name']] = furuta_eval_data
+                    for idx, seed in enumerate(SEEDS_TO_USE):
+                        annonuce_message("Now testing algorithm %s with %s in environment %s with seed %s" % 
+                            (alg_dict['name'], arch_dict['name'], env_dict['name'], seed))
+                        furuta_eval_data = evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type=RENDER_TYPE)
+                        if furuta_eval_data is not None:
+                            if idx == 0:
+                                eval_table[env_dict['name']][arch_dict['name']][alg_dict['name']] = furuta_eval_data
+                            else:
+                                eval_table[env_dict['name']][arch_dict['name']][alg_dict['name']] = np.concatenate(
+                                    (eval_table[env_dict['name']][arch_dict['name']][alg_dict['name']], furuta_eval_data))
         if len(eval_table.keys()) > 0:
+            import datetime
+            eval_table['_debug'] = "eval_table created at %s, using seeds %s." % (datetime.datetime.now(), SEEDS_TO_USE)
             with open(get_table_data_filepath(), "wb") as f:
                 pickle.dump(eval_table, f)
 
@@ -677,11 +684,14 @@ def main():
         try:
             with open(get_table_data_filepath(), "rb") as f:
                 eval_table = pickle.load(f)
+                heads_up_message("Loaded eval_table: %s" % eval_table['_debug'])
         except:
             print("NOTE: Could not load evaluation table data. Run an evaluation on the Furuta environments to generate it.")
         # Process eval. table data.
         if eval_table is not None:
             for env_name in eval_table:
+                if env_name.startswith('_'):
+                    continue
                 for arch_name in eval_table[env_name]:
                     eval_2d_table_data = [["Alg", "Mean", "Std"]]
                     for alg_name in eval_table[env_name][arch_name]:
@@ -707,6 +717,7 @@ if __name__ == "__main__":
     argparser.add_argument("-e", "--eval", action="store_true", help="Perform evaluation")
     argparser.add_argument("-p", "--plot", action="store_true", help="Produce plots")
     argparser.add_argument("-v", "--video", action="store_true", help="Save 3d-video")
+    argparser.add_argument("-z", "--hide", action="store_true", help="Hide visualization during evaluation")
     argparser.add_argument("-a", "--algs", nargs='*', help="The algorithms to use")
     argparser.add_argument("-n", "--envs", nargs='*', help="The environments to use")
     argparser.add_argument("-r", "--arch", nargs='*', help="The architectures to use")
@@ -728,6 +739,9 @@ if __name__ == "__main__":
     
     if args.video:
         SAVE_VIDEO = True
+    
+    if args.hide:
+        HIDE_VIS = True
 
     if args.algs:
         if len(args.algs) == 1 and args.algs[0] == 'all':

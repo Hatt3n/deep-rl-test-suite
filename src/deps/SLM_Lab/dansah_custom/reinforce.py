@@ -119,7 +119,7 @@ def reinforce(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
     env = EnvWrapper(env_fn, spec, collect_data=collect_data)
     if is_furuta_env:
         from custom_envs.furuta_swing_up_eval import FurutaPendulumEnvEvalWrapper
-        env = FurutaPendulumEnvEvalWrapper(env=env)
+        env = FurutaPendulumEnvEvalWrapper(env=env, seed=seed)
     agent = Agent(spec, Body(env, spec))
 
     SLM_Trainer(agent, env, spec).run_rl(num_episodes=num_episodes, logger_kwargs=logger_kwargs)

@@ -1,4 +1,7 @@
 """
+Defines functions and classes for calculating the performance of an agent
+on the Furuta pendulum swing-up task independent of what environment it was
+trained on.
 
 Added by @dansah.
 """
@@ -35,7 +38,7 @@ class FurutaPendulumEnvEvalWrapper(gym.core.Env):
         of an episode if the angles leave a pre-defined boundary at least once.
     """
 
-    def __init__(self, env=None, env_fn=None, early_stopping=False):
+    def __init__(self, env=None, env_fn=None, early_stopping=False, seed=None):
         if env is not None:
             self.env = env
         elif env_fn is not None:
@@ -71,6 +74,9 @@ class FurutaPendulumEnvEvalWrapper(gym.core.Env):
             self.state_space = self.env.state_space
         except:
             pass
+
+        if seed is not None:
+            self.seed(seed=seed)
 
 
     def seed(self, seed=None):
