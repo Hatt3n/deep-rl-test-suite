@@ -369,7 +369,8 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
 ###############################
 def transfer_learning(alg_dict, arch_dict, env_dict, phys_env, seed):
     """
-
+    Apply an agent trained in a simulated Furuta environment to the real, physical
+    system.
     """
     from custom_envs.furuta_swing_up_eval import FurutaPendulumEnvEvalWrapper
 
