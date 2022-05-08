@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-05-07
+Last edit: 2022-05-08
 By: dansah
 """
 
@@ -52,7 +52,7 @@ import pickle
 #########################
 # High-level Parameters #
 #########################
-DO_TRAINING, DO_POLICY_TEST, DO_PLOTS = False, False, False
+DO_TRAINING, DO_POLICY_TEST, DO_TRANSFER, DO_PLOTS = False, False, False, False
 ALGORITHMS_TO_USE = []
 ENVS_TO_USE = []
 ARCHS_TO_USE = []
@@ -364,6 +364,39 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
         return independent_furuta_data
 
 
+###############################
+# Transfer Learning Functions #
+###############################
+def transfer_learning(alg_dict, arch_dict, env_dict, phys_env, seed):
+    """
+
+    """
+    from custom_envs.furuta_swing_up_eval import FurutaPendulumEnvEvalWrapper
+
+    max_ep_len = env_dict['max_ep_len']
+    output_dir = get_output_dir(alg_dict['name'], arch_dict['name'], env_dict['name'], seed)
+
+    num_episodes = 5
+
+    if alg_dict['type'] == 'spinup':
+        itr = -1
+        sim_env, get_action = test_policy.load_policy_and_env(output_dir,
+                                                              itr if itr >=0 else 'last',
+                                                              False,  # Deterministic true/false. Only used by the SAC algorithm.
+                                                              False)
+        sim_env.close()
+
+        env = FurutaPendulumEnvEvalWrapper(env=phys_env, seed=seed)
+        test_policy.run_policy(env, get_action, max_ep_len=max_ep_len, num_episodes=num_episodes, render=False)
+        env.close()
+        independent_furuta_data = env.get_internal_rewards()
+    else:
+        raise NotImplementedError("No transfer learning handler for algorithm type %s" % (alg_dict['type']))
+
+    print("Independently defined evaluation data:", independent_furuta_data)
+    return independent_furuta_data
+
+
 #########################
 # Misc helper functions #
 #########################
@@ -659,6 +692,18 @@ def main():
             with open(get_table_data_filepath(), "wb") as f:
                 pickle.dump(eval_table, f)
 
+    if DO_TRANSFER:
+        for env_dict in envs:
+            is_furuta_env = env_dict['name'].find('furuta') >= 0
+            if not is_furuta_env and "qube2_sim" != env_dict['name']:
+                raise NotImplementedError("Cannot apply a non-Furuta environment to the physical system.")
+            for arch_dict in architectures:
+                for alg_dict in algorithms:
+                    for _, seed in enumerate(SEEDS_TO_USE):
+                        annonuce_message("Now transfering algorithm %s with %s trained in environment %s with seed %s" % 
+                            (alg_dict['name'], arch_dict['name'], env_dict['name'], seed))
+                        phys_furuta_eval_data = transfer_learning(alg_dict, arch_dict, env_dict, make_env_qube2_real(), seed)
+
     if DO_PLOTS:
         res_maker_dict = dict()
         for env_dict in envs:
@@ -715,6 +760,7 @@ if __name__ == "__main__":
     argparser.add_argument("-x", "--exp", help="Specify an experiment to run")
     argparser.add_argument("-t", "--train", action="store_true", help="Perform training")
     argparser.add_argument("-e", "--eval", action="store_true", help="Perform evaluation")
+    argparser.add_argument("-l", "--transfer", action="store_true", help="Perform transfer learning")
     argparser.add_argument("-p", "--plot", action="store_true", help="Produce plots")
     argparser.add_argument("-v", "--video", action="store_true", help="Save 3d-video")
     argparser.add_argument("-z", "--hide", action="store_true", help="Hide visualization during evaluation")
@@ -733,6 +779,9 @@ if __name__ == "__main__":
 
     if args.eval:
         DO_POLICY_TEST = True
+
+    if args.transfer:
+        DO_TRANSFER = True
 
     if args.plot:
         DO_PLOTS = True
