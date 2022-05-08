@@ -48,6 +48,8 @@ import pickle
 #    per run. 
 #    Both recorded crashes occurred (almost?) immediately after saving the model, and very shortly after
 #    4*10^5 interactions had been completed.
+#    NOTE: On Windows 11 and Python 3.9.10, the error did not occur even after 4.3*10^5 steps.
+#    The saving still occurred at ~4*10^5 steps without issue. This thus appears to be a macOS issue.
 
 #########################
 # High-level Parameters #
