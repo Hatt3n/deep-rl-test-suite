@@ -38,7 +38,7 @@ class FurutaPendulumEnvEvalWrapper(gym.core.Env):
         of an episode if the angles leave a pre-defined boundary at least once.
     """
 
-    def __init__(self, env=None, env_fn=None, early_stopping=False, seed=None):
+    def __init__(self, env=None, env_fn=None, early_stopping=False, seed=None, qube2=False):
         if env is not None:
             self.env = env
         elif env_fn is not None:
@@ -78,6 +78,8 @@ class FurutaPendulumEnvEvalWrapper(gym.core.Env):
         if seed is not None:
             self.seed(seed=seed)
 
+        self._is_qube2 = qube2
+
 
     def seed(self, seed=None):
         return self.env.seed(seed=seed)
@@ -111,11 +113,19 @@ class FurutaPendulumEnvEvalWrapper(gym.core.Env):
             torque = action
         else:
             torque = action[0] # Unused
-        internal_state = self.env._get_internal_state()
-        theta = internal_state[0] - np.pi
-        dthetadt = internal_state[1]
-        phi = internal_state[3]
-        #dphidt = internal_state[2]
+        if not self._is_qube2:
+            internal_state = self.env._get_internal_state()
+            theta = internal_state[0] - np.pi
+            dthetadt = internal_state[1]
+            phi = internal_state[3]
+            #dphidt = internal_state[2]
+        else:
+            internal_state = self.env._get_state()
+            alpha = internal_state[1]
+            theta = alpha - np.pi
+            dthetadt = internal_state[3]
+            phi = internal_state[0]
+            #dphidt = internal_state[2]
         dphidt = None # To ensure fairness, this value is not used when comparing across environments.
 
         if self.early_stopping:

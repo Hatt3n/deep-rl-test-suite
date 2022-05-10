@@ -24,6 +24,7 @@ class FurutaQube2(QubeSwingupEnv):
         self._theta_max = OBS_MAX[0]
         self._alpha_max = OBS_MAX[1]
         self._velocity_max = 5 * 2 * np.pi
+        self.DT = 1 / frequency
 
 
     def step(self, action):

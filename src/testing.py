@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-05-08
+Last edit: 2022-05-09
 By: dansah
 """
 
@@ -379,7 +379,7 @@ def transfer_learning(alg_dict, arch_dict, env_dict, phys_env, seed):
     max_ep_len = env_dict['max_ep_len']
     output_dir = get_output_dir(alg_dict['name'], arch_dict['name'], env_dict['name'], seed)
 
-    num_episodes = 5
+    num_episodes = 2
 
     if alg_dict['type'] == 'spinup':
         itr = -1
@@ -389,7 +389,7 @@ def transfer_learning(alg_dict, arch_dict, env_dict, phys_env, seed):
                                                               False)
         sim_env.close()
 
-        env = FurutaPendulumEnvEvalWrapper(env=phys_env, seed=seed)
+        env = FurutaPendulumEnvEvalWrapper(env=phys_env, seed=seed, qube2=True)
         test_policy.run_policy(env, get_action, max_ep_len=max_ep_len, num_episodes=num_episodes, render=False)
         env.close()
         independent_furuta_data = env.get_internal_rewards()
