@@ -82,6 +82,11 @@ def get_experiment(exp_name):
         algorithms_to_use = ["rs_mpc"]
         architecture_to_use = ["64_64_relu"]
         seeds = [0, 10, 100, 1000]
+    elif exp_name == "walker":
+        envs_to_use = ["walker_2d"]
+        algorithms_to_use = ["ddpg"]
+        architecture_to_use = ["400_300_relu"]
+        seeds = [0, 10, 100, 1000]
     else:
         NotImplementedError("Unknown experiment %s" % exp_name)
     return envs_to_use, algorithms_to_use, architecture_to_use, seeds
