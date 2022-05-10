@@ -27,6 +27,11 @@ def get_experiment(exp_name):
         algorithms_to_use = ["rs_mpc", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
         architecture_to_use = ["64_64_tanh", "256_128_relu"]
         seeds = [0, 10, 100, 1000]
+    elif exp_name == "cartpole3":
+        envs_to_use = ["cartpole"]
+        algorithms_to_use = ["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
+        architecture_to_use = ["400_300_relu"]
+        seeds = [0, 10, 100, 1000]
     elif exp_name == "mix":
         envs_to_use = ["furuta_paper_mix"]
         algorithms_to_use = ["rs_mpc", "dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
