@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-05-09
+Last edit: 2022-05-11
 By: dansah
 """
 
@@ -165,6 +165,14 @@ def make_env_pbrs3():
     """
     from custom_envs.furuta_swing_up_pbrs_v3 import FurutaPendulumEnvPBRS_V3
     return FurutaPendulumEnvPBRS_V3()
+
+def make_env_pbrs3_norm():
+    """
+    Creates a Furuta Pendulum environment (swing-up) same as the
+    regular PBRS 3, but with normalized and clipped actions.
+    """
+    from custom_envs.furuta_swing_up_pbrs_v3_norm import FurutaPendulumEnvPBRS_V3_norm
+    return FurutaPendulumEnvPBRS_V3_norm()
 
 def make_env_qube2_sim():
     """
@@ -545,6 +553,12 @@ def main():
             "name": "furuta_pbrs2",
             "env_fn": make_env_pbrs2,
             "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_pbrs2),
+            "max_ep_len": 501,
+        },
+        {
+            "name": "furuta_pbrs3_norm",
+            "env_fn": make_env_pbrs3_norm,
+            "env_fn_disc": lambda : DiscretizingEnvironmentWrapper(make_env_pbrs3_norm),
             "max_ep_len": 501,
         },
         {

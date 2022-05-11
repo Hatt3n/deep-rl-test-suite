@@ -10,4 +10,5 @@ REWARDS = {
     "furuta_pbrs": FurutaPBRSreward,
     "furuta_pbrs2": FurutaPBRSreward_V2,
     "furuta_pbrs3": FurutaPBRSreward_V3,
+    "furuta_pbrs3_norm": FurutaPBRSreward_V3,
 }

@@ -415,6 +415,7 @@ duplicate_env_configs = {
     "furuta_paper_mix": algo_env_configs['furuta_paper'],
     "furuta_pbrs": algo_env_configs['furuta_pbrs2'],
     "furuta_pbrs3": algo_env_configs['furuta_pbrs2'],
+    "furuta_pbrs3_norm": algo_env_configs['furuta_pbrs2'],
     "qube2_real": algo_env_configs['qube2_sim'],
 }
 
