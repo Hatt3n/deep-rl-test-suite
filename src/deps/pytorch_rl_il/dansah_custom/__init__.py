@@ -9,4 +9,5 @@ REWARDS = {
     "furuta_paper_mix": FurutaPaperMixReward,
     "furuta_pbrs": FurutaPBRSreward,
     "furuta_pbrs2": FurutaPBRSreward_V2,
+    "furuta_pbrs3": FurutaPBRSreward_V3,
 }

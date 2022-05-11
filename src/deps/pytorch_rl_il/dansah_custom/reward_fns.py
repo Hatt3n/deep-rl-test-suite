@@ -182,3 +182,28 @@ class FurutaPBRSreward_V2():
                        dthetadt=states.features[:, 3], phi=states.features[:, 0], dphidt=states.features[:, 1])
 
         return reward + outer_reward
+
+
+class FurutaPBRSreward_V3(FurutaPBRSreward_V2):
+    """
+    Same as PBRS V2, but with a large negative reward when moving to a state
+    in which the environment terminates for a reason other than reaching the
+    timelimit.
+    """
+
+    def __init__(self):
+        self.max_theta = 1.5 * np.pi
+        self.max_phi = 2 * np.pi
+
+
+    def __call__(self, states, next_states, actions):
+        org_rewards = super().__call__(states, next_states, actions)
+        abs_thetas_old = abs(states.features[:, 2])
+        abs_thetas = abs(next_states.features[:, 2])
+        abs_phis = abs(next_states.features[:, 0])
+        early_term = (abs_thetas > self.max_theta) + (abs_phis > self.max_phi) # Same as in Mix
+        early_term += (abs_thetas_old > 2/3 * np.pi) * (abs_thetas <= 2/3 * np.pi) # PBRS 2
+
+        rewards = org_rewards - org_rewards * early_term # Set reward to 0 for states with early term.
+        rewards -= 500 * early_term # Set reward to -500 for states with early term.
+        return rewards
