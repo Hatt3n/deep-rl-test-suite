@@ -24,6 +24,19 @@ algo_env_configs = {
                 "normalize": True,
             },
         },
+        "a2c_s_adam": {
+            "training_frequency": 32,
+            "log_frequency": 400,
+            "specific": {
+                "action_policy": "default",
+                "normalize": True,
+                "optim_spec": {
+                    "name": "Lookahead",
+                    "optimizer": "RAdam",
+                    "lr": 3e-5,
+                },
+            },
+        },
         "ddpg": {
             "training_frequency": 32,
             "log_frequency": 400,

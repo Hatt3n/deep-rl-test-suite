@@ -32,6 +32,11 @@ def get_experiment(exp_name):
         algorithms_to_use = ["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
         architecture_to_use = ["400_300_relu"]
         seeds = [0, 10, 100, 1000]
+    elif exp_name == "cartpole_lr":
+        envs_to_use = ["cartpole"]
+        algorithms_to_use = ["a2c_s_adam"]
+        architecture_to_use = ["256_128_relu"]
+        seeds = [0, 10, 100, 1000]
     elif exp_name == "cartpole3_rs":
         envs_to_use = ["cartpole"]
         algorithms_to_use = ["rs_mpc"]

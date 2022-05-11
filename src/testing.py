@@ -600,6 +600,12 @@ def main():
             "type": "slm",              # Species the implementation type/origin of the algorithm.
         },
         {
+            "name": "a2c_s_adam",
+            "alg_fn": a2c_s,
+            "continuous": True,
+            "type": "slm",
+        },
+        {
             "name": "a2c",
             "alg_fn": a2c,
             "continuous": True,
