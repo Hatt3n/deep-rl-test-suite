@@ -98,6 +98,9 @@ def load_pytorch_policy(fpath, itr, deterministic=False, force_disc=False):
     print('\n\nLoading from %s.\n\n'%fname)
 
     model = torch.load(fname)
+    # print(model) # Investigate weights and bias terms
+    # for param in model.parameters():
+    #     print(param.data)
 
     # make function for producing an action given a single state
     def get_action(x):
