@@ -295,6 +295,7 @@ algo_env_configs = {
                 "perform_eval": False,
                 "replay_start_size": 10000,
                 "horizon": 40,
+                "num_samples": 3000,
             }
         },
     },
