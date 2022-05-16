@@ -134,7 +134,7 @@ class MLPActorCritic(nn.Module):
             a = pi.sample()
             logp_a = self.pi._log_prob_from_distribution(pi, a)
             if not self.is_discrete:
-                np.clip(a, self.act_limit_lower, self.act_limit_upper)
+                a = np.clip(a, self.act_limit_lower, self.act_limit_upper)
             v = self.v(obs)
         return a.numpy(), v.numpy(), logp_a.numpy()
 
