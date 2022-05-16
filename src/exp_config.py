@@ -102,6 +102,11 @@ def get_experiment(exp_name):
         algorithms_to_use = ["rs_mpc"]
         architecture_to_use = ["64_64_relu", "256_128_relu"]
         seeds = [0, 10, 100, 1000]
+    elif exp_name == "rs_pbrs_c":
+        envs_to_use = ["furuta_pbrs3"]
+        algorithms_to_use = ["rs_mpc"]
+        architecture_to_use = ["64_64_relu"]
+        seeds = [0, 10, 100, 1000]
     elif exp_name == "walker":
         envs_to_use = ["walker_2d"]
         algorithms_to_use = ["ddpg"]
