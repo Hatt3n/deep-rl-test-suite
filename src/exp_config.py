@@ -82,11 +82,6 @@ def get_experiment(exp_name):
         algorithms_to_use = ["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
         architecture_to_use = ["64_relu", "64_64_relu", "64_64_tanh"]
         seeds = [0, 10, 100, 1000]
-    elif exp_name == "rs_org":
-        envs_to_use = ["furuta_paper"]
-        algorithms_to_use = ["rs_mpc"]
-        architecture_to_use = ["64_64_relu"]
-        seeds = [0, 10, 100, 1000]
     elif exp_name == "pbrs1":
         envs_to_use = ["furuta_pbrs"]
         algorithms_to_use = ["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
