@@ -77,6 +77,11 @@ def get_experiment(exp_name):
         algorithms_to_use = ["ddpg"]
         architecture_to_use = ["64_64_relu"]
         seeds = [0]
+    elif exp_name == "qube2_sim_ext":
+        envs_to_use = ["qube2_sim"]
+        algorithms_to_use = ["ppo", "a2c"]
+        architecture_to_use = ["64_64_relu"]
+        seeds = [0, 10, 100, 1000]
     elif exp_name == "furuta_org":
         envs_to_use = ["furuta_paper"]
         algorithms_to_use = ["dqn", "reinforce", "a2c_s", "a2c", "ppo", "ddpg"]
