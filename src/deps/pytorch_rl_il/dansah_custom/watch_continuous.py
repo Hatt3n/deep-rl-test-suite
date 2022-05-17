@@ -9,6 +9,7 @@ import time
 from .gym_env import GymEnvironment
 from deps.pytorch_rl_il.dansah_custom.rs_mpc_launcher import rs_mpc_preset
 from .util import get_log_dir, load_buffer_args
+from .initializer import set_seed
 
 def evaluate_algorithm(env_fn, ac_kwargs, max_ep_len, num_episodes=5, seed=0, fps=None, collect_data=False,
                        is_furuta_env=False):
@@ -27,6 +28,7 @@ def evaluate_algorithm(env_fn, ac_kwargs, max_ep_len, num_episodes=5, seed=0, fp
     env.seed(seed)
 
     # Load agent
+    set_seed(seed)
     log_dir = get_log_dir(ac_kwargs['rel_output_dir'])
     loaded_buffer_args = load_buffer_args(log_dir)
     agent_fn = rs_mpc_preset(**loaded_buffer_args)
