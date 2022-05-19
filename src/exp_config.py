@@ -72,6 +72,11 @@ def get_experiment(exp_name):
         algorithms_to_use = ["dqn", "reinforce", "ddpg", "a2c", "a2c_s", "ppo"]
         architecture_to_use = ["64_relu", "64_64_tanh", "256_128_relu"]
         seeds = [0, 10, 100, 1000]
+    elif exp_name == "pbrs3_ppo":
+        envs_to_use = ["furuta_pbrs3"]
+        algorithms_to_use = ["ppo"]
+        architecture_to_use = ["64_64_relu", "256_128_relu"]
+        seeds = [0, 10, 100, 1000]
     elif exp_name == "qube2_sim":
         envs_to_use = ["qube2_sim"]
         algorithms_to_use = ["ddpg"]
@@ -113,6 +118,11 @@ def get_experiment(exp_name):
         architecture_to_use = ["64_64_relu"]
         seeds = [0, 10, 100, 1000]
     elif exp_name == "walker":
+        envs_to_use = ["walker_2d"]
+        algorithms_to_use = ["ddpg"]
+        architecture_to_use = ["400_300_relu"]
+        seeds = [0, 10, 100, 1000]
+    elif exp_name == "walker_p":
         envs_to_use = ["walker_2d"]
         algorithms_to_use = ["ddpg"]
         architecture_to_use = ["400_300_relu"]

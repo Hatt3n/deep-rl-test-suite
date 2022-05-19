@@ -329,6 +329,18 @@ algo_env_configs = {
                 #"batch_size": 10,
             },
         },
+        "ppo": {
+            "training_frequency": 1000,
+            "log_frequency": 4000,
+            "specific": {
+            #     "train_pi_iters": 80,
+            #     "train_v_iters": 80,
+            #     "clip_ratio": 0.2,
+            #     "vf_lr": 2e-3,
+            #     "pi_lr": 2e-3,
+            #     "target_kl": 1.00,
+            }
+        },
     },
     "qube2_sim": {
         "a2c": {
