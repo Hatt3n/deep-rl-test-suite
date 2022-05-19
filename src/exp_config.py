@@ -124,7 +124,7 @@ def get_experiment(exp_name):
         seeds = [0, 10, 100, 1000]
     elif exp_name == "walker_p":
         envs_to_use = ["walker_2d"]
-        algorithms_to_use = ["ddpg"]
+        algorithms_to_use = ["ppo"]
         architecture_to_use = ["400_300_relu"]
         seeds = [0, 10, 100, 1000]
     else:
