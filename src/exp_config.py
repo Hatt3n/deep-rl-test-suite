@@ -75,7 +75,7 @@ def get_experiment(exp_name):
     elif exp_name == "pbrs3_ppo":
         envs_to_use = ["furuta_pbrs3"]
         algorithms_to_use = ["ppo"]
-        architecture_to_use = ["64_64_relu", "256_128_relu"]
+        architecture_to_use = ["64_64_relu", "256_128_relu", "400_300_relu"]
         seeds = [0, 10, 100, 1000]
     elif exp_name == "qube2_sim":
         envs_to_use = ["qube2_sim"]
