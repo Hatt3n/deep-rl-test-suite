@@ -1,0 +1,2 @@
+This folder contains the trained models used for the results in the report, as well as some additions ones that are not used
+such as the ones in "out1905_ppo_fixed.zip".
