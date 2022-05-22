@@ -335,10 +335,10 @@ algo_env_configs = {
             "specific": {
             #     "train_pi_iters": 80,
             #     "train_v_iters": 80,
-            #     "clip_ratio": 0.2,
-            #     "vf_lr": 2e-3,
-            #     "pi_lr": 2e-3,
-            #     "target_kl": 1.00,
+                "clip_ratio": 0.3, # was 0.2
+                # "vf_lr": 1e-4,
+                # "pi_lr": 1e-4,
+                "target_kl": 10.00, # was 1.0
             }
         },
     },
