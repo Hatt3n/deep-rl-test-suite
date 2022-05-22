@@ -5,6 +5,7 @@ out*/
 data/
 !src/deps/pytorch_rl_il/rlil/environments/data/
 *.zip
+!training_data/*.zip
 org_out___
 report_res
 
