@@ -511,6 +511,7 @@ def main():
     from deps.SLM_Lab.dansah_custom.a2c import a2c as a2c_s
     from deps.SLM_Lab.dansah_custom.reinforce import reinforce
     from deps.SLM_Lab.dansah_custom.dqn import dqn
+    from deps.SLM_Lab.dansah_custom.ppo import ppo_s
     from deps.pytorch_rl_il.dansah_custom.rs_mpc_launcher import rs_mpc
     all_environments = [
         {
@@ -621,6 +622,12 @@ def main():
             "name": "dqn",
             "alg_fn": dqn,
             "continuous": False,
+            "type": "slm",
+        },
+        {
+            "name": "ppo_s",
+            "alg_fn": ppo_s,
+            "continuous": True,
             "type": "slm",
         },
         {
