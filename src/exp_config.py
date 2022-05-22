@@ -72,6 +72,16 @@ def get_experiment(exp_name):
         algorithms_to_use = ["dqn", "reinforce", "ddpg", "a2c", "a2c_s", "ppo"]
         architecture_to_use = ["64_relu", "64_64_tanh", "256_128_relu"]
         seeds = [0, 10, 100, 1000]
+    elif exp_name == "pbrs3_ppo_s1":
+        envs_to_use = ["furuta_pbrs3"]
+        algorithms_to_use = ["ppo_s"]
+        architecture_to_use = ["64_64_relu"]
+        seeds = [0, 10, 100, 1000]
+    elif exp_name == "pbrs3_ppo_s2":
+        envs_to_use = ["furuta_pbrs3"]
+        algorithms_to_use = ["ppo_s"]
+        architecture_to_use = ["64_relu", "64_64_tanh", "256_128_relu"]
+        seeds = [0, 10, 100, 1000]
     elif exp_name == "pbrs3_ppo":
         envs_to_use = ["furuta_pbrs3"]
         algorithms_to_use = ["ppo"]
