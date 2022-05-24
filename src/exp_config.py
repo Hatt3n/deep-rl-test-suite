@@ -91,7 +91,7 @@ def get_experiment(exp_name):
         envs_to_use = ["qube2_sim"]
         algorithms_to_use = ["ddpg"]
         architecture_to_use = ["64_64_relu"]
-        seeds = [0]
+        seeds = [0, 10, 100, 1000]
     elif exp_name == "qube2_sim_ext":
         envs_to_use = ["qube2_sim"]
         algorithms_to_use = ["ppo", "a2c"]

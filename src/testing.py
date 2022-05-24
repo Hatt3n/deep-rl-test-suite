@@ -387,7 +387,7 @@ def transfer_learning(alg_dict, arch_dict, env_dict, phys_env, seed):
     max_ep_len = env_dict['max_ep_len']
     output_dir = get_output_dir(alg_dict['name'], arch_dict['name'], env_dict['name'], seed)
 
-    num_episodes = 2
+    num_episodes = 5
 
     if alg_dict['type'] == 'spinup':
         itr = -1
@@ -723,6 +723,7 @@ def main():
                 pickle.dump(eval_table, f)
 
     if DO_TRANSFER:
+        eval_results_array = [] # Will summarize across all tests; not an per arch, env, or alg basis.
         for env_dict in envs:
             is_furuta_env = env_dict['name'].find('furuta') >= 0
             if not is_furuta_env and "qube2_sim" != env_dict['name']:
@@ -733,6 +734,9 @@ def main():
                         annonuce_message("Now transfering algorithm %s with %s trained in environment %s with seed %s" % 
                             (alg_dict['name'], arch_dict['name'], env_dict['name'], seed))
                         phys_furuta_eval_data = transfer_learning(alg_dict, arch_dict, env_dict, make_env_qube2_real(), seed)
+                        eval_results_array = np.concatenate((eval_results_array, phys_furuta_eval_data))
+        annonuce_message("Results of evaluation: mean %s, std %s, across %s tests." % 
+            (np.mean(eval_results_array), np.std(eval_results_array), len(eval_results_array)))
 
     if DO_PLOTS:
         res_maker_dict = dict()
