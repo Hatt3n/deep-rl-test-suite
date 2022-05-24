@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-05-11
+Last edit: 2022-05-24
 By: dansah
 """
 
@@ -263,6 +263,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
     env_fn = env_dict['env_fn'] if alg_dict['continuous'] else env_dict['env_fn_disc']
     output_dir = get_output_dir(alg_dict['name'], arch_dict['name'], env_dict['name'], seed)
 
+    is_qube2_env = env_dict['name'].find('qube2') >= 0
     is_furuta_env = env_dict['name'].find('furuta') >= 0
     independent_furuta_data = None
 
@@ -281,8 +282,8 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
                                                           itr if itr >=0 else 'last',
                                                           False,  # Deterministic true/false. Only used by the SAC algorithm.
                                                           force_disc)
-        if is_furuta_env:
-            env = FurutaPendulumEnvEvalWrapper(env=env, seed=seed)
+        if is_furuta_env or is_qube2_env:
+            env = FurutaPendulumEnvEvalWrapper(env=env, seed=seed, qube2=is_qube2_env)
         if use_3d_render:
             try:
                 env.collect_data()
@@ -290,11 +291,11 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
                 print("WARNING: The environment does not support collecting data. Default rendering will be used.")
                 use_3d_render = False
                 use_def_render = True
-        test_policy.run_policy(env, get_action, max_ep_len=max_ep_len, num_episodes=num_episodes, render=use_def_render)
+        test_policy.run_policy(env, get_action, max_ep_len=max_ep_len, num_episodes=num_episodes, render=(use_def_render and not HIDE_VIS))
         if use_3d_render:
             collected_data = env.get_data()
         env.close()
-        independent_furuta_data = None if not is_furuta_env else env.get_internal_rewards()
+        independent_furuta_data = None if not (is_furuta_env or is_qube2_env) else env.get_internal_rewards()
 
     elif alg_dict['type'] == 'baselines':
         with tf.Graph().as_default():
@@ -360,7 +361,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
     else:
         raise NotImplementedError("No handler for algorithm type %s" % (alg_dict['type']))
     
-    if use_3d_render and is_furuta_env and not HIDE_VIS:
+    if use_3d_render and (is_furuta_env or is_qube2_env) and not HIDE_VIS:
         assert collected_data is not None, "No data was collected for rendering!"
         from deps.visualizer.visualizer import plot_animated
         name = "%s - %s" % (alg_dict['name'], arch_dict['name'])
@@ -369,7 +370,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
         plot_animated(phis=plot_data["phis"], thetas=plot_data["thetas"], l_arm=1.0, l_pendulum=1.0, 
                       frame_rate=50, name=name, save_as=get_video_filepath(name))
     
-    if is_furuta_env:
+    if is_furuta_env or is_qube2_env:
         print("Independently defined evaluation data:", independent_furuta_data)
         return independent_furuta_data
 
@@ -699,11 +700,12 @@ def main():
     if DO_POLICY_TEST:
         eval_table = dict()
         for env_dict in envs:
+            is_qube2_env = env_dict['name'].find('qube2') >= 0
             is_furuta_env = env_dict['name'].find('furuta') >= 0
-            if is_furuta_env:
+            if is_furuta_env or is_qube2_env:
                 eval_table[env_dict['name']] = dict()
             for arch_dict in architectures:
-                if is_furuta_env:
+                if is_furuta_env or is_qube2_env:
                     eval_table[env_dict['name']][arch_dict['name']] = dict()
                 for alg_dict in algorithms:
                     for idx, seed in enumerate(SEEDS_TO_USE):
