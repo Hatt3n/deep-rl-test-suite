@@ -73,6 +73,11 @@ algo_env_configs = {
                 "training_iter": 2,
             },
         },
+        "ppo_s": {
+            "training_frequency": 2048,
+            "log_frequency": 4000,
+            "specific": {},
+        },
         "ppo": {
             "training_frequency": 32,
             "log_frequency": 400,
