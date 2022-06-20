@@ -12,7 +12,7 @@ import numpy as np
 
 
 class EnvWrapper():
-    def __init__(self, env_fn, spec, collect_data=False):
+    def __init__(self, env_fn, spec, collect_data=False, render=True):
         self.env = env_fn()
 
         # Pass through
@@ -30,7 +30,7 @@ class EnvWrapper():
                 self.collect_data = True
             except:
                 print("WARNING: The environment does not support collecting data. Default rendering will be used.")
-        self.to_render = util.in_eval_lab_mode() and not self.collect_data
+        self.to_render = util.in_eval_lab_mode() and not self.collect_data and render
         
         # From base.py in src\deps\SLM_Lab\slm_lab\env
         self.env_spec = spec['env'][0]  # idx 0 for single-env

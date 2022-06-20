@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-05-24
+Last edit: 2022-06-20
 By: dansah
 """
 
@@ -72,6 +72,7 @@ WORK_DIR = pathlib.Path().resolve()
 ####################
 RENDER_TYPE, SAVE_VIDEO = "3d", False # Whether to use 3d-rendering for the Furuta environments or not / save the evaluation video.
 HIDE_VIS = False # Whether to hide the visualization during evaluation
+FORCE_EVAL = True # Forces evaluation data to be calculated.
 
 #########################
 # Environment functions #
@@ -266,6 +267,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
     is_qube2_env = env_dict['name'].find('qube2') >= 0
     is_furuta_env = env_dict['name'].find('furuta') >= 0
     independent_furuta_data = None
+    eval_data = None
 
     num_episodes = 5
 
@@ -291,7 +293,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
                 print("WARNING: The environment does not support collecting data. Default rendering will be used.")
                 use_3d_render = False
                 use_def_render = True
-        test_policy.run_policy(env, get_action, max_ep_len=max_ep_len, num_episodes=num_episodes, render=(use_def_render and not HIDE_VIS))
+        eval_data = test_policy.run_policy(env, get_action, max_ep_len=max_ep_len, num_episodes=num_episodes, render=(use_def_render and not HIDE_VIS))
         if use_3d_render:
             collected_data = env.get_data()
         env.close()
@@ -318,6 +320,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             state = model.initial_state if hasattr(model, 'initial_state') else None
             dones = np.zeros((1,))
 
+            eval_data = []
             current_episode = 0
             episode_rew = np.zeros(env.num_envs) if isinstance(env, VecEnv) else np.zeros(1)
             while current_episode < num_episodes:
@@ -328,12 +331,13 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
 
                 obs, rew, done, _ = env.step(actions)
                 episode_rew += rew
-                if use_def_render:
+                if use_def_render and not HIDE_VIS:
                     env.render()
                 done_any = done.any() if isinstance(done, np.ndarray) else done
                 if done_any:
                     current_episode += 1
                     for i in np.nonzero(done)[0]:
+                        eval_data.append(episode_rew[i])
                         print('episode_rew={}'.format(episode_rew[i]))
                         episode_rew[i] = 0
             collected_data = env.get_data()
@@ -344,19 +348,27 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
     elif alg_dict['type'] == 'slm':
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation'], use_torch=True), 
                                      arch_dict=arch_dict, env_dict=env_dict, output_dir=output_dir, xtra_args=True)
-        collected_data, independent_furuta_data = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, 
-                                                                     steps_per_epoch=max_ep_len, num_episodes=num_episodes, 
-                                                                     logger_kwargs=dict(), seed=seed, mode='enjoy', collect_data=use_3d_render, 
-                                                                     is_furuta_env=is_furuta_env)
+        collected_data, eval_res = alg_dict['alg_fn'](env_fn=env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, 
+                                                      steps_per_epoch=max_ep_len, num_episodes=num_episodes, 
+                                                      logger_kwargs=dict(), seed=seed, mode='enjoy', collect_data=use_3d_render, 
+                                                      is_furuta_env=is_furuta_env, render=(not HIDE_VIS))
+        if is_furuta_env:
+            independent_furuta_data = eval_res
+        if FORCE_EVAL:
+            eval_data = eval_res
 
     elif alg_dict['type'] == 'rlil':
         from deps.pytorch_rl_il.dansah_custom.watch_continuous import evaluate_algorithm
         act_func = get_activation_by_name(arch_dict['activation'], use_torch=True)
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=act_func, arch_dict=arch_dict, env_dict=env_dict,
                                      output_dir=output_dir, xtra_args=True)
-        collected_data, independent_furuta_data = evaluate_algorithm(env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, 
-                                                                     num_episodes=num_episodes, seed=seed, collect_data=use_3d_render,
-                                                                     is_furuta_env=is_furuta_env)
+        collected_data, eval_res = evaluate_algorithm(env_fn, ac_kwargs=ac_kwargs, max_ep_len=max_ep_len, 
+                                                      num_episodes=num_episodes, seed=seed, collect_data=use_3d_render,
+                                                      is_furuta_env=is_furuta_env, render=(not HIDE_VIS))
+        if is_furuta_env:
+            independent_furuta_data = eval_res
+        if FORCE_EVAL:
+            eval_data = eval_res
 
     else:
         raise NotImplementedError("No handler for algorithm type %s" % (alg_dict['type']))
@@ -373,6 +385,10 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
     if is_furuta_env or is_qube2_env:
         print("Independently defined evaluation data:", independent_furuta_data)
         return independent_furuta_data
+    if FORCE_EVAL:
+        assert eval_data is not None and len(eval_data) > 0, "No evaluation data was generated!"
+        print("Eval data: %s" % eval_data)
+        return eval_data
 
 
 ###############################
@@ -702,22 +718,23 @@ def main():
         for env_dict in envs:
             is_qube2_env = env_dict['name'].find('qube2') >= 0
             is_furuta_env = env_dict['name'].find('furuta') >= 0
-            if is_furuta_env or is_qube2_env:
+            save_data = is_furuta_env or is_qube2_env or FORCE_EVAL
+            if save_data:
                 eval_table[env_dict['name']] = dict()
             for arch_dict in architectures:
-                if is_furuta_env or is_qube2_env:
+                if save_data:
                     eval_table[env_dict['name']][arch_dict['name']] = dict()
                 for alg_dict in algorithms:
                     for idx, seed in enumerate(SEEDS_TO_USE):
                         annonuce_message("Now testing algorithm %s with %s in environment %s with seed %s" % 
                             (alg_dict['name'], arch_dict['name'], env_dict['name'], seed))
-                        furuta_eval_data = evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type=RENDER_TYPE)
-                        if furuta_eval_data is not None:
+                        eval_data = evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type=RENDER_TYPE)
+                        if eval_data is not None:
                             if idx == 0:
-                                eval_table[env_dict['name']][arch_dict['name']][alg_dict['name']] = furuta_eval_data
+                                eval_table[env_dict['name']][arch_dict['name']][alg_dict['name']] = eval_data
                             else:
                                 eval_table[env_dict['name']][arch_dict['name']][alg_dict['name']] = np.concatenate(
-                                    (eval_table[env_dict['name']][arch_dict['name']][alg_dict['name']], furuta_eval_data))
+                                    (eval_table[env_dict['name']][arch_dict['name']][alg_dict['name']], eval_data))
         if len(eval_table.keys()) > 0:
             import datetime
             eval_table['_debug'] = "eval_table created at %s, using seeds %s." % (datetime.datetime.now(), SEEDS_TO_USE)
@@ -776,8 +793,8 @@ def main():
                 for arch_name in eval_table[env_name]:
                     eval_2d_table_data = [["Alg", "Mean", "Std"]]
                     for alg_name in eval_table[env_name][arch_name]:
-                        furuta_eval_data = eval_table[env_name][arch_name][alg_name]
-                        eval_2d_table_data.append([alg_name, np.mean(furuta_eval_data), np.std(furuta_eval_data)])
+                        eval_data = eval_table[env_name][arch_name][alg_name]
+                        eval_2d_table_data.append([alg_name, np.mean(eval_data), np.std(eval_data)])
                     try:
                         res_maker_dict[env_name][arch_name]["tables"] = {"Independent evaluation data": eval_2d_table_data}
                     except:

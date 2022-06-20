@@ -12,7 +12,7 @@ from .util import get_log_dir, load_buffer_args
 from .initializer import set_seed
 
 def evaluate_algorithm(env_fn, ac_kwargs, max_ep_len, num_episodes=5, seed=0, fps=None, collect_data=False,
-                       is_furuta_env=False):
+                       is_furuta_env=False, render=True):
     """
     Evaluates the trained rs_mpc agent specified by the output directory parameter,
     on the given environment.
@@ -36,13 +36,14 @@ def evaluate_algorithm(env_fn, ac_kwargs, max_ep_len, num_episodes=5, seed=0, fp
     agent.load(log_dir)
 
     # Evaluate
-    watch(agent, env, num_episodes, fps=fps, collect_data=collect_data, eval=True)
+    eval_data = watch(agent, env, num_episodes, fps=fps, collect_data=collect_data, eval=True, render=render)
     env.close()
-    return env.get_data(), None if not is_furuta_env else env.get_internal_rewards()
+    return env.get_data(), eval_data if not is_furuta_env else env.get_internal_rewards()
 
-def watch(agent, env, num_episodes, fps=None, collect_data=False, eval=True):
+def watch(agent, env, num_episodes, fps=None, collect_data=False, eval=True, render=True):
     action = None
     returns = None
+    eval_data = []
     # have to call this before initial reset for pybullet envs
     if "Bullet" in env.name and not collect_data:
         env.render(mode="human")
@@ -54,13 +55,15 @@ def watch(agent, env, num_episodes, fps=None, collect_data=False, eval=True):
             lazy_agent = agent.make_lazy_agent(evaluation=eval)
             lazy_agent.set_replay_buffer(env)
             if returns is not None:
-                print('returns: {}'.format(returns))
+                eval_data.append(returns.numpy()[0])
+                print('returns: {}'.format(returns.numpy()[0]))
                 episode += 1
             env.reset()
             returns = 0
         else:
             env.step(action)
-        if not collect_data:
+        if not collect_data and render:
             env.render()
         action = lazy_agent.act(env.state, env.reward)
         returns += env.reward
+    return eval_data

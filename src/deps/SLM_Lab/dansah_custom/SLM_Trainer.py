@@ -25,12 +25,15 @@ class SLM_Trainer():
     def run_rl(self, num_episodes=None, logger_kwargs=dict()):
         '''Run the main RL loop until clock.max_frame, or num_episodes if given.'''
         # Spinup logger
+        do_eval = util.in_eval_lab_mode()
         do_extra_logging = util.in_train_lab_mode()
         if do_extra_logging:
             sp_logger = EpochLogger(**logger_kwargs)
             tstart = time.time()
             latest_epoch = self.agent.performed_epochs()
             env_interactions = 0
+        if do_eval:
+            eval_data = []
 
         at_least_one_done = False
         real_curr_t = 0
@@ -71,6 +74,9 @@ class SLM_Trainer():
                     rft_string = info.get('rft')
                     if (rft_string and rft_string == 'timelimit') or ep_len == self.spec['env'][0]['max_t']:
                         rft = 1
+            if done and do_eval:
+                maybeepinfo = info.get('episode')
+                eval_data.append(maybeepinfo['r'])
             update_ret = self.agent.update(state, action, reward, next_state, done, rft)
             if do_extra_logging and update_ret[0] is not np.nan:
                 sp_logger.store(Loss=update_ret[0])
@@ -97,6 +103,8 @@ class SLM_Trainer():
                 sp_logger.log_tabular('Loss', average_only=True)
                 sp_logger.log_tabular('Time', time.time()-tstart)
                 sp_logger.dump_tabular()
+        if do_eval:
+            return eval_data
 
     def to_ckpt(self, env, mode='eval'):
         '''Check with clock whether to run log/eval ckpt: at the start, save_freq, and the end'''

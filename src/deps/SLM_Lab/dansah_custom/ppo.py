@@ -18,7 +18,7 @@ logger = logger.get_logger(__name__)
 
 def ppo_s(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
           epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, lr=3e-4,
-          mode='train', collect_data=False, is_furuta_env=False):
+          mode='train', collect_data=False, is_furuta_env=False, render=True):
     """
     mode: Should be 'train' or 'enjoy'.
     """
@@ -114,16 +114,16 @@ def ppo_s(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
 
     set_global_seed(spec)
 
-    env = EnvWrapper(env_fn, spec, collect_data=collect_data)
+    env = EnvWrapper(env_fn, spec, collect_data=collect_data, render=render)
     if is_furuta_env:
         from custom_envs.furuta_swing_up_eval import FurutaPendulumEnvEvalWrapper
         env = FurutaPendulumEnvEvalWrapper(env=env, seed=seed)
     agent = Agent(spec, Body(env, spec))
 
-    SLM_Trainer(agent, env, spec).run_rl(num_episodes=num_episodes, logger_kwargs=logger_kwargs)
+    eval_data = SLM_Trainer(agent, env, spec).run_rl(num_episodes=num_episodes, logger_kwargs=logger_kwargs)
     collected_data = env.get_data()
     env.close()
-    return collected_data, None if not is_furuta_env else env.get_internal_rewards()
+    return collected_data, eval_data if not is_furuta_env else env.get_internal_rewards()
 
 
 class PPO(ActorCritic):

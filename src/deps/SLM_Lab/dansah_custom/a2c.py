@@ -15,7 +15,8 @@ import os
 def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
         epochs=10, logger_kwargs=dict(), seed=0, min_env_interactions=0, mode='train', collect_data=False,
         action_policy="epsilon_greedy", optim_spec=None, same_optim=True, normalize=False, batch_norm=False, lr_scheduler_spec=None,
-        clip_grad_val=0.5, val_loss_coef=0.5, entropy_coef_start=0.001, entropy_coef_end=0.001, entropy_end_step=0, init_fn=None, is_furuta_env=False):
+        clip_grad_val=0.5, val_loss_coef=0.5, entropy_coef_start=0.001, entropy_coef_end=0.001, entropy_end_step=0, init_fn=None, is_furuta_env=False,
+        render=True):
     """
     mode: Should be 'train' or 'enjoy'.
     """
@@ -118,7 +119,7 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
 
     set_global_seed(spec)
 
-    env = EnvWrapper(env_fn, spec, collect_data=collect_data)
+    env = EnvWrapper(env_fn, spec, collect_data=collect_data, render=render)
     if is_furuta_env:
         from custom_envs.furuta_swing_up_eval import FurutaPendulumEnvEvalWrapper
         env = FurutaPendulumEnvEvalWrapper(env=env, seed=seed)
@@ -127,7 +128,7 @@ def a2c(env_fn, ac_kwargs, max_ep_len, steps_per_epoch, num_episodes=None,
     #action = a2c_agent.act(np.array([1, 2, 3, 4, 5]))
     #print("Took action %s" % action)
 
-    SLM_Trainer(a2c_agent, env, spec).run_rl(num_episodes=num_episodes, logger_kwargs=logger_kwargs)
+    eval_data = SLM_Trainer(a2c_agent, env, spec).run_rl(num_episodes=num_episodes, logger_kwargs=logger_kwargs)
     collected_data = env.get_data()
     env.close()
-    return collected_data, None if not is_furuta_env else env.get_internal_rewards()
+    return collected_data, eval_data if not is_furuta_env else env.get_internal_rewards()
