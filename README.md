@@ -6,6 +6,9 @@ The following software must be installed before the installation can be performe
 - ipm-python https://github.com/br4sco/ipm-python
 - pyglet version 1.5.11 or 1.5.14
 - cpprb
+- cmake
+- swig
+- mpi
 - To save videos of the Furuta Pendulum environment, ffmpeg is required
 - To use some of the environments, such as Walker 2D, MuJoCo is required
 - All software listed in [src/deps/SLM_Lab/environment.yml](src/deps/SLM_Lab/environment.yml) except Roboschool and Ray

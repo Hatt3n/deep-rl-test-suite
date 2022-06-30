@@ -5,7 +5,7 @@ the Furuta pendulum swing-up ones.
 NOTE: The word epoch is commonly used to refer to the number of
 parameter updates performed throughout this code base.
 
-Last edit: 2022-06-20
+Last edit: 2022-06-21
 By: dansah
 """
 
@@ -309,9 +309,9 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             from baselines.common import tf_util
             from deps.baselines.dansah_custom.dummy_vec_env import DummyVecEnv
             logger.log("Running trained model")
-            if is_furuta_env:
+            if is_furuta_env or is_qube2_env:
                 _env = env_fn()
-                env_fn = lambda : FurutaPendulumEnvEvalWrapper(env=_env, seed=seed)
+                env_fn = lambda : FurutaPendulumEnvEvalWrapper(env=_env, seed=seed, qube2=is_qube2_env)
             env = DummyVecEnv(env_fns=[env_fn], max_ep_len=max_ep_len, collect_data=use_3d_render)
             use_def_render = not env.collect_data # True if data will be collected
             use_3d_render = not use_def_render
@@ -343,7 +343,7 @@ def evaluate_algorithm(alg_dict, arch_dict, env_dict, seed, render_type="def"):
             collected_data = env.get_data()
             env.close()
             tf_util.get_session().close()
-            independent_furuta_data = None if not is_furuta_env else env.envs[0].get_internal_rewards()
+            independent_furuta_data = None if not (is_furuta_env or is_qube2_env) else env.envs[0].get_internal_rewards()
 
     elif alg_dict['type'] == 'slm':
         ac_kwargs = create_ac_kwargs(mlp_architecture=arch_dict['layers'], activation_func=get_activation_by_name(arch_dict['activation'], use_torch=True), 
